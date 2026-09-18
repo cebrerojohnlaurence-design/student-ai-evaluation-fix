@@ -6,9 +6,51 @@
 
 // NOTE: API_KEY is now kept server-side for the chatbot (secure).
 // It is only used here for the AI Document Scanner image processing.
-const API_KEY = "AIzaSyBxuH1-YI8eavYwuIV2hKsph6Ilf0fbmHc";
+const API_KEY = window.APP_API_KEY || ""; // Set via server-side meta tag or window variable
 const currentUser = { role: null, name: '', id: '' };
 let pendingLrn = ''; // Global tracker for student authentication flow
+
+let globalSettings = {};
+
+async function fetchSettings() {
+    try {
+        const res = await fetch('/api/maintenance/settings');
+        const data = await res.json();
+        if (data.settings) {
+            globalSettings = data.settings;
+            
+            // Apply global settings to UI immediately upon fetching
+            
+            // 1. Sidebar App Name
+            if (globalSettings.app_name) {
+                const sidebarTitle = document.querySelector('.sidebar-text h1');
+                if (sidebarTitle) sidebarTitle.textContent = globalSettings.app_name;
+            }
+            
+            // 2. Global School Year Select
+            const globalSelect = document.getElementById('global-school-year');
+            if (globalSelect && globalSettings.school_years) {
+                try {
+                    let syList = JSON.parse(globalSettings.school_years);
+                    if (Array.isArray(syList) && syList.length > 0) {
+                        let active = globalSettings.active_sy || window.currentRecordSchoolYear || '2025-2026';
+                        // if currentRecordSchoolYear is not in syList, maybe it was set via URL. Let's just render syList.
+                        if (!syList.includes(active)) active = syList[0]; // fallback
+                        
+                        globalSelect.innerHTML = syList.map(sy => `<option value="${sy}" ${sy === active ? 'selected' : ''}>S.Y. ${sy}</option>`).join('');
+                        
+                        // If it changed, we should update currentRecordSchoolYear
+                        if (window.currentRecordSchoolYear !== active) {
+                            window.currentRecordSchoolYear = active;
+                        }
+                    }
+                } catch(e){}
+            }
+        }
+    } catch (e) {
+        console.error('Failed to fetch settings', e);
+    }
+}
 
 const coreSubjects = ['Business Math', 'Science', 'English', 'Filipino', 'A.P.', 'MAPEH'];
 let MAX_WW = parseInt(localStorage.getItem('system_max_ww')) || 5;
@@ -19,19 +61,37 @@ function getTransmutedGrade(percent) {
     if (percent === null || percent === undefined || isNaN(percent)) return null;
     let p = parseFloat(percent);
     if (p > 100) p = 100;
+    if (p === 100) return 100;
 
-    // Exact mapping for passing: 60 raw = 75 grade, 100 raw = 100 grade
+    // DepEd DO 8 s. 2015 Transmutation Table implementation
     if (p >= 60) {
-        return Math.round(0.625 * p + 37.5);
+        // 60 -> 75, each step of 1.6 adds 1 point
+        let step = Math.floor((p - 60) / 1.6);
+        let grade = 75 + step;
+        return grade > 99 ? 99 : grade;
+    } else {
+        // 0 -> 60, each step of 4 adds 1 point
+        let step = Math.floor(p / 4);
+        let grade = 60 + step;
+        return grade > 74 ? 74 : grade;
     }
-
-    // Mapping for failing: 0 -> 60, linear up to 59.99 -> 74
-    // Formula: (74-60)/(60-0) * p + 60 = 14/60 * p + 60 = 0.233 * p + 60
-    return Math.round(0.233 * p + 60);
 }
 
 function getSubjectWeights(subject, studentObj = null) {
     const s = (subject || '').toLowerCase();
+
+    // 1. Check for custom weights saved by the teacher in localStorage
+    const customWeights = localStorage.getItem('grading_weights_' + s);
+    if (customWeights) {
+        try {
+            const parsed = JSON.parse(customWeights);
+            if (parsed && typeof parsed.ww === 'number' && typeof parsed.pt === 'number' && typeof parsed.qa === 'number') {
+                return parsed;
+            }
+        } catch (e) {
+            console.error('Failed to parse custom weights', e);
+        }
+    }
 
     // Check if Senior High based on student object or global context
     let isSH = window.studentsAnalyticsLevel === 'SH';
@@ -254,7 +314,9 @@ const adminCreds = { user: 'admin', pass: 'admin123' };
  */
 async function initAppData() {
     try {
-        const syParam = window.currentRecordSchoolYear || '2025-2026';
+        await fetchSettings();
+        
+        const syParam = window.currentRecordSchoolYear || globalSettings.active_sy || '2025-2026';
         const [studRes, teachRes, subjectsRes] = await Promise.all([
             fetch('/api/students?school_year=' + syParam, { headers: { 'Accept': 'application/json' } }),
             fetch('/api/teachers?school_year=' + syParam, { headers: { 'Accept': 'application/json' } }),
@@ -292,6 +354,26 @@ async function initAppData() {
             });
             computeStudentGWA(s);
         });
+
+        if (currentUser.role === 'teacher') {
+            const adviserSections = (currentUser.section || '').split(',').map(s => s.trim()).filter(Boolean);
+            const subjects = (currentUser.subject || '').split(',').map(s => s.trim()).filter(Boolean);
+            const teacherSections = new Set(adviserSections);
+            
+            const pinned = JSON.parse(localStorage.getItem('cnhs_pinned_sections_' + currentUser.id)) || [];
+            pinned.forEach(sec => {
+                if (sec !== 'all') teacherSections.add(sec);
+            });
+            
+            if (subjects.length > 0) {
+                students.forEach(s => {
+                    if (s.subjects && s.subjects.some(sub => subjects.includes(sub.n))) {
+                        teacherSections.add(s.section);
+                    }
+                });
+            }
+            currentUser.handledSections = [...teacherSections].sort();
+        }
     } catch (e) {
         console.warn('Could not load data from DB:', e);
     }
@@ -373,7 +455,13 @@ async function login(role) {
         currentUser.role = role;
         if (role === 'admin') {
             if (u !== adminCreds.user || p !== adminCreds.pass) {
-                throw new Error("Invalid Admin Credentials! (Hint: admin / admin123)");
+                // Log failed attempt
+                fetch('/api/activity-logs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ action: 'Failed login attempt on Admin Portal: ' + u, user: 'System' })
+                }).catch(() => {});
+                throw new Error("Invalid username or password.");
             }
             currentUser.name = 'Admin Principal';
             currentUser.id = 'ADM-001';
@@ -384,7 +472,15 @@ async function login(role) {
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify({ username: u, password: p })
             });
-            if (!res.ok) throw new Error("Invalid Teacher Credentials!");
+            if (!res.ok) {
+                // Log failed attempt
+                fetch('/api/activity-logs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ action: 'Failed login attempt on Teacher Portal: ' + u, user: 'System' })
+                }).catch(() => {});
+                throw new Error("Invalid username or password.");
+            }
 
             const teacher = await res.json();
             currentUser.name = teacher.name;
@@ -405,6 +501,7 @@ async function login(role) {
             document.getElementById('nav-subjects').classList.remove('hidden');
             document.getElementById('nav-assign-section').classList.remove('hidden');
             document.getElementById('nav-logs').classList.remove('hidden');
+            document.getElementById('nav-maintenance')?.classList.remove('hidden');
         } else if (currentUser.isAdviser) {
             document.getElementById('nav-adviser').classList.remove('hidden');
         }
@@ -454,18 +551,32 @@ async function login(role) {
 function logout(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     logActivity(`User Logged Out: ${currentUser.name}`);
-    const role = currentUser.role || 'admin';
+    
+    let loginRole = currentUser.role || 'admin';
+    if (loginRole === 'principal' || loginRole === 'curriculum_coordinator') {
+        loginRole = 'admin'; // Route back to the master staff portal
+    }
+    
     sessionStorage.removeItem('cnhs_session');
-    location.href = `/login/${role}`;
+    location.href = `/login/${loginRole}`;
 }
 
 function logActivity(action) {
-    activityLogs.unshift({
+    const user = (typeof currentUser !== 'undefined' && currentUser.name) ? currentUser.name : 'System';
+    const logEntry = {
         id: activityLogs.length + 1,
-        user: currentUser.name || 'System',
+        user: user,
         action: action,
         time: new Date().toLocaleString()
-    });
+    };
+    activityLogs.unshift(logEntry);
+
+    // Persist to database asynchronously without blocking
+    fetch('/api/activity-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ action: action, user: user })
+    }).catch(err => console.warn('Failed to persist activity log', err));
 }
 
 function navigate(view, skipPush = false) {
@@ -488,6 +599,7 @@ function navigate(view, skipPush = false) {
             'assign-section': 'assign-section',
             'logs': 'activity-logs',
             'settings': 'settings',
+            'maintenance': 'settings', // Since there's no backend blade for maintenance we use settings route or just dashboard route as anchor
             'analytics': 'analytics'
         };
         const urlSegment = routeMap[view] || view;
@@ -535,6 +647,13 @@ function navigate(view, skipPush = false) {
 
             case 'logs': renderLogs(area); break;
             case 'settings': renderSettings(area); break;
+            case 'maintenance': 
+                if (typeof renderMaintenance === 'function') {
+                    renderMaintenance(area);
+                } else {
+                    area.innerHTML = `<div class="p-8">Maintenance logic not loaded.</div>`;
+                }
+                break;
             case 'analytics':
                 area.innerHTML = `
                     <div class="h-full flex flex-col items-center justify-center text-gray-500 p-8">
@@ -543,17 +662,6 @@ function navigate(view, skipPush = false) {
                         </div>
                         <h2 class="text-xl font-bold text-gray-900 mb-2">Analytics Dashboard</h2>
                         <p class="text-sm max-w-sm text-center">The analytics module is pending data integration.</p>
-                    </div>
-                `;
-                break;
-            case 'settings':
-                area.innerHTML = `
-                    <div class="h-full flex flex-col items-center justify-center text-gray-500 p-8">
-                        <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6 border border-gray-100">
-                            <i class="fas fa-cog text-3xl text-gray-400"></i>
-                        </div>
-                        <h2 class="text-xl font-bold text-gray-900 mb-2">System Settings</h2>
-                        <p class="text-sm max-w-sm text-center">Settings configuration interface not yet initialized.</p>
                     </div>
                 `;
                 break;
@@ -734,8 +842,24 @@ function openScanner(mode) {
 
 function closeCameraModal() { document.getElementById('camera-modal').classList.add('hidden'); }
 
+let excelFile = null;
+
 function handleDocPreview(input) {
     if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const ext = file.name.split('.').pop().toLowerCase();
+        
+        if (ext === 'xlsx' || ext === 'xls') {
+            excelFile = file;
+            base64Image = null;
+            document.getElementById('doc-preview').src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzODQgNTEyIj48cGF0aCBmaWxsPSIjMTA3YzQxIiBkPSJNNjQgMEMyOC43IDAgMCAyOC43IDAgNjRWNDQ4YzAgMzUuMyAyOC43IDY0IDY0IDY0SDMyMGMzNS4zIDAgNjQtMjguNyA2NC02NFYxNjBIMjU2Yy0xNy43IDAtMzItMTQuMy0zMi0zMlYwSDY0eiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0xNTIuMSAxOTkuMWwyMy41IDU5LjkgMjMuOS01OS45aDM0LjZsLTQxLjUgODYuOCA0NC41IDk0LjJoLTM1LjNsLTI2LjYtNjcuOS0yNy40IDY3LjloLTM0LjlsNDMuOC05My41LTQwLTg3LjVoMzUuNHoiLz48cGF0aCBmaWxsPSIjMTg1YzM3IiBkPSJNMjU2IDBWMTI4YzAgMTcuNyAxNC4zIDMyIDMyIDMySDM4NEwyNTYgMHoiLz48L3N2Zz4=';
+            document.getElementById('doc-preview').classList.remove('hidden');
+            document.getElementById('doc-placeholder').classList.add('hidden');
+            document.getElementById('process-btn').disabled = false;
+            return;
+        }
+
+        excelFile = null;
         const reader = new FileReader();
         reader.onload = function (e) {
             const img = new Image();
@@ -767,10 +891,21 @@ async function processAI() {
     let prompt = "";
     const subjectScope = currentUser.role === 'teacher' ? `for ${currentUser.subject} only` : `for all subjects (${coreSubjects.join(', ')})`;
 
+    const sampleStudent = students && students.length ? (students.find(s => s.section) || students[0]) : null;
+    const secStr = sampleStudent && sampleStudent.section ? sampleStudent.section.toLowerCase() : '';
+    const isSHS = secStr.includes('grade 11') || secStr.includes('grade 12') || secStr.includes('gr 11') || secStr.includes('gr 12') || window.studentsAnalyticsLevel === 'SH';
+
     if (currentMode === 'STUDENT_LIST') {
         prompt = "Extract student names from this list. Format as JSON array of objects: {name: 'Last, First M.', lrn: 'unique_random_8_digits', section: 'Detected'}. For section, ONLY extract it if it's explicitly a class block or grade level (e.g., 'Grade 10-Einstein' or 'ICT 12'). Do NOT use subject names like 'Business Math' or 'Business Ethics' as the section. If you can't find a valid section name, leave section as null.";
     } else if (currentMode === 'CLASS_RECORD' && currentSubjectView) {
-        prompt = `Extract student names and their ${currentSubjectView} breakdown scores: Quiz 1-5 (ww1, ww2, ww3, ww4, ww5), Task 1-5 (pt1, pt2, pt3, pt4, pt5), Exam (qa). Format as JSON array: {name: 'Student Name', ww1: number, ww2: number, pt1: number, qa: number}`;
+        let wwFormat = [];
+        let ptFormat = [];
+        for(let i=1; i<=MAX_WW; i++) wwFormat.push('ww'+i);
+        for(let i=1; i<=MAX_PT; i++) ptFormat.push('pt'+i);
+        
+        let formatStr = `{name: 'Student Name', ${wwFormat.map(k=>`${k}: number`).join(', ')}, ${ptFormat.map(k=>`${k}: number`).join(', ')}, qa: number}`;
+        let termStr = isSHS ? "using the 3-Term (Trimester) format" : "using the 4-Quarter format";
+        prompt = `Extract student names and their ${currentSubjectView} breakdown scores ${termStr}: Quiz 1-${MAX_WW} (${wwFormat.join(', ')}), Task 1-${MAX_PT} (${ptFormat.join(', ')}), Exam (qa). IMPORTANT: Also extract the row for maximum possible scores (often labeled 'Highest Possible Score') and include it in the array exactly like a student, but strictly name it 'HIGHEST POSSIBLE SCORE'. Format as JSON array: ${formatStr}`;
     } else if (currentMode === 'ATTENDANCE') {
         prompt = `Extract student names and their daily attendance marks for 25 columns (5 weeks of Monday-Friday). Return "/" for present, "x" for absent, or "" if blank. Format as JSON array of objects: {name: 'Student Name', marks: ["/", "x", ...]} (exactly 25 strings in marks array). Look for a grid layout with M-T-W-T-F headers.`;
     } else {
@@ -778,10 +913,67 @@ async function processAI() {
     }
 
     try {
-        const res = await callGemini(prompt, base64Image);
-        if (res.startsWith("Error:")) throw new Error(res);
+        let data = [];
 
-        const data = JSON.parse(res.replace(/```json|```/g, '').trim());
+        let resText = "";
+
+        if (excelFile) {
+            const arrayBuffer = await excelFile.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            
+            let targetSheetName = workbook.SheetNames[0];
+            const targetQuarter = window.currentRecordQuarter || 1;
+            
+            const qStr1 = isSHS ? `T${targetQuarter}` : `Q${targetQuarter}`;
+            const qStr2 = isSHS ? `TERM ${targetQuarter}` : `QUARTER ${targetQuarter}`;
+            for (let name of workbook.SheetNames) {
+                if (name.toUpperCase().includes(qStr1) || name.toUpperCase().includes(qStr2)) {
+                    targetSheetName = name;
+                    break;
+                }
+            }
+            
+            const worksheet = workbook.Sheets[targetSheetName];
+            const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            const cleaned = rawJson.filter(row => row && row.length > 0 && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''));
+            const dataString = JSON.stringify(cleaned);
+            
+            const excelPrompt = prompt + `\n\nHere is the data extracted from the sheet '${targetSheetName}' of the uploaded Excel file. You are extracting scores for ${isSHS ? 'Term' : 'Quarter'} ${targetQuarter}. Please carefully analyze the data and extract the scores according to the format instructions above:\n\n` + dataString;
+            
+            resText = await callGemini(excelPrompt, null);
+        } else {
+            resText = await callGemini(prompt, base64Image);
+        }
+        
+        if (resText.startsWith("Error:")) throw new Error(resText);
+        
+        // Robust JSON extraction
+        let cleanRes = resText.replace(/```json|```/gi, '').trim();
+        const startIdx = cleanRes.indexOf('[');
+        const endIdx = cleanRes.lastIndexOf(']');
+        if (startIdx !== -1 && endIdx !== -1) {
+            cleanRes = cleanRes.substring(startIdx, endIdx + 1);
+        }
+        
+        data = JSON.parse(cleanRes);
+
+        const getClean = str => (str || '').toLowerCase().replace(/[^a-z]/g, '');
+        const findStudentMatch = (itemName) => {
+            if (!itemName) return null;
+            const parts = itemName.split(',');
+            const lastName = getClean(parts[0]);
+            const firstName = getClean(parts[1]);
+            const matchingLast = students.filter(x => getClean(x.name.split(',')[0]) === lastName);
+            if (matchingLast.length === 1) return matchingLast[0];
+            if (matchingLast.length > 1) {
+                return matchingLast.find(x => {
+                    const xFirst = getClean(x.name.split(',')[1]);
+                    return xFirst.includes(firstName) || firstName.includes(xFirst);
+                }) || matchingLast[0];
+            }
+            const rawName = getClean(itemName);
+            return students.find(x => getClean(x.name).includes(rawName) || rawName.includes(getClean(x.name)));
+        };
 
         if (currentMode === 'STUDENT_LIST') {
             await Promise.all(data.map(async x => {
@@ -801,14 +993,44 @@ async function processAI() {
             let count = 0;
             const savePromises = [];
             data.forEach(item => {
-                const s = students.find(x => x.name.toLowerCase().includes(item.name.toLowerCase().split(',')[0]));
+                if (item.name && item.name.toUpperCase().includes('HIGHEST POSSIBLE SCORE')) {
+                    const key = `${currentSubjectView}_Q${window.currentRecordQuarter || 1}`;
+                    if (!maxScores[key]) maxScores[key] = {};
+                    for (let i = 1; i <= MAX_WW; i++) {
+                        const keyMatch = Object.keys(item).find(k => k.toLowerCase() === 'ww' + i);
+                        if (keyMatch && item[keyMatch] !== undefined && item[keyMatch] !== null && String(item[keyMatch]).trim() !== '') maxScores[key]['ww' + i] = parseFloat(item[keyMatch]);
+                    }
+                    for (let i = 1; i <= MAX_PT; i++) {
+                        const keyMatch = Object.keys(item).find(k => k.toLowerCase() === 'pt' + i);
+                        if (keyMatch && item[keyMatch] !== undefined && item[keyMatch] !== null && String(item[keyMatch]).trim() !== '') maxScores[key]['pt' + i] = parseFloat(item[keyMatch]);
+                    }
+                    const qaMatch = Object.keys(item).find(k => k.toLowerCase() === 'qa');
+                    if (qaMatch && item[qaMatch] !== undefined && item[qaMatch] !== null && String(item[qaMatch]).trim() !== '') maxScores[key].qa = parseFloat(item[qaMatch]);
+                    
+                    if (typeof saveMaxScores === 'function') {
+                        saveMaxScores();
+                        students.forEach(st => { 
+                            if(typeof recalcStudentSubject === 'function') recalcStudentSubject(st, currentSubjectView); 
+                            if(typeof computeStudentGWA === 'function') computeStudentGWA(st); 
+                        });
+                    }
+                    return; // Stop here for max score row
+                }
+                const s = findStudentMatch(item.name);
                 if (s) {
                     let subObj = s.subjects.find(x => x.n === currentSubjectView);
                     if (!subObj) { subObj = { n: currentSubjectView }; s.subjects.push(subObj); }
 
-                    for (let i = 1; i <= MAX_WW; i++) if (item['ww' + i]) subObj['ww' + i] = item['ww' + i];
-                    for (let i = 1; i <= MAX_PT; i++) if (item['pt' + i]) subObj['pt' + i] = item['pt' + i];
-                    if (item.qa) subObj.qa = item.qa;
+                    for (let i = 1; i <= MAX_WW; i++) {
+                        const keyMatch = Object.keys(item).find(k => k.toLowerCase() === 'ww' + i);
+                        if (keyMatch && item[keyMatch] !== undefined && item[keyMatch] !== null && String(item[keyMatch]).trim() !== '') subObj['ww' + i] = item[keyMatch];
+                    }
+                    for (let i = 1; i <= MAX_PT; i++) {
+                        const keyMatch = Object.keys(item).find(k => k.toLowerCase() === 'pt' + i);
+                        if (keyMatch && item[keyMatch] !== undefined && item[keyMatch] !== null && String(item[keyMatch]).trim() !== '') subObj['pt' + i] = item[keyMatch];
+                    }
+                    const qaMatch = Object.keys(item).find(k => k.toLowerCase() === 'qa');
+                    if (qaMatch && item[qaMatch] !== undefined && item[qaMatch] !== null && String(item[qaMatch]).trim() !== '') subObj.qa = item[qaMatch];
 
                     recalcStudentSubject(s, currentSubjectView);
                     computeStudentGWA(s);
@@ -836,7 +1058,7 @@ async function processAI() {
         } else if (currentMode === 'ATTENDANCE') {
             let count = 0;
             data.forEach(item => {
-                const s = students.find(x => x.name.toLowerCase().includes(item.name.toLowerCase().split(',')[0]));
+                const s = findStudentMatch(item.name);
                 if (s && item.marks && Array.isArray(item.marks)) {
                     item.marks.slice(0, 25).forEach((m, i) => {
                         const input = document.querySelector(`input[data-lrn="${s.lrn}"][data-idx="${i}"]`);
@@ -855,7 +1077,7 @@ async function processAI() {
             let count = 0;
             const savePromises = [];
             data.forEach(item => {
-                const s = students.find(x => x.name.toLowerCase().includes(item.name.toLowerCase().split(',')[0]));
+                const s = findStudentMatch(item.name);
                 if (s) {
                     if (item.subjects) {
                         item.subjects.forEach(newSub => {
@@ -915,7 +1137,8 @@ function startCameraScanner() {
     }, 100);
 
     function initStudentScanner() {
-        document.getElementById('qr-scan-overlay').classList.remove('hidden');
+        const overlay = document.getElementById('qr-scan-overlay');
+        if (overlay) overlay.classList.remove('hidden');
         html5QrCode = new Html5Qrcode("qr-reader");
         html5QrCode.start(
             { facingMode: "environment" },
@@ -1222,6 +1445,9 @@ window.renderQuickGradesTable = function (sy) {
         let totalGeneralGrade = 0;
         let subjectsWithFinal = 0;
 
+        const isSHS = yearLevelStr.includes('11') || yearLevelStr.includes('12') || window.studentsAnalyticsLevel === 'SH';
+        const maxTerms = isSHS ? 3 : 4;
+
         // Iterate subjects exactly like a traditional transcript
         Object.keys(bySubject).forEach(subName => {
             const subs = bySubject[subName];
@@ -1244,11 +1470,13 @@ window.renderQuickGradesTable = function (sy) {
             const s1 = subs.find(s => (s.quarter || 1) == 1); q1 = updateQ(1, s1 ? (s1.grade || s1.g) : null);
             const s2 = subs.find(s => (s.quarter || 1) == 2); q2 = updateQ(2, s2 ? (s2.grade || s2.g) : null);
             const s3 = subs.find(s => (s.quarter || 1) == 3); q3 = updateQ(3, s3 ? (s3.grade || s3.g) : null);
-            const s4 = subs.find(s => (s.quarter || 1) == 4); q4 = updateQ(4, s4 ? (s4.grade || s4.g) : null);
+            if (!isSHS) {
+                const s4 = subs.find(s => (s.quarter || 1) == 4); q4 = updateQ(4, s4 ? (s4.grade || s4.g) : null);
+            }
 
-            if (count === 4) {
+            if (count === maxTerms) {
                 // Typical DepEd academic averaging uses round instead of formatting exactly 2 decimal places
-                const finalGrade = Math.round(sum / 4);
+                const finalGrade = Math.round(sum / maxTerms);
                 finalStr = finalGrade;
                 totalGeneralGrade += finalGrade;
                 subjectsWithFinal++;
@@ -1260,7 +1488,7 @@ window.renderQuickGradesTable = function (sy) {
                     <td class="border-r border-gray-300 px-2 py-3 text-center text-[13px] text-gray-900 font-bold">${q1 !== '-' ? q1 : ''}</td>
                     <td class="border-r border-gray-300 px-2 py-3 text-center text-[13px] text-gray-900 font-bold">${q2 !== '-' ? q2 : ''}</td>
                     <td class="border-r border-gray-300 px-2 py-3 text-center text-[13px] text-gray-900 font-bold">${q3 !== '-' ? q3 : ''}</td>
-                    <td class="border-r border-gray-300 px-2 py-3 text-center text-[13px] text-gray-900 font-bold">${q4 !== '-' ? q4 : ''}</td>
+                    ${!isSHS ? `<td class="border-r border-gray-300 px-2 py-3 text-center text-[13px] text-gray-900 font-bold">${q4 !== '-' ? q4 : ''}</td>` : ''}
                     <td class="border-r border-gray-300 px-2 py-3 text-center text-[14px] font-black text-primary bg-primary/5">${finalStr !== '-' ? finalStr : ''}</td>
                 </tr>
                 `;
@@ -1273,7 +1501,7 @@ window.renderQuickGradesTable = function (sy) {
             const gwaColor = gwa >= 75 ? 'text-green-700' : 'text-red-600';
             gwaHtml = `
                 <tr class="bg-gray-50/80">
-                    <td colspan="5" class="border border-gray-300 px-4 py-4 text-xs font-black uppercase text-gray-800 tracking-wider text-left">General Average for the Academic Year</td>
+                    <td colspan="${isSHS ? 4 : 5}" class="border border-gray-300 px-4 py-4 text-xs font-black uppercase text-gray-800 tracking-wider text-left">General Average for the Academic Year</td>
                     <td class="border border-gray-300 px-2 py-4 text-center text-lg font-black ${gwaColor} bg-gray-100">${gwa}</td>
                 </tr>
                 `;
@@ -1285,10 +1513,10 @@ window.renderQuickGradesTable = function (sy) {
                         <thead>
                             <tr class="bg-gray-50 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] leading-tight border-b border-gray-100">
                                 <th class="px-6 py-5 text-left font-black">Learning Areas</th>
-                                <th class="px-3 py-5 text-center w-[10%]">Q1</th>
-                                <th class="px-3 py-5 text-center w-[10%]">Q2</th>
-                                <th class="px-3 py-5 text-center w-[10%]">Q3</th>
-                                <th class="px-3 py-5 text-center w-[10%]">Q4</th>
+                                <th class="px-3 py-5 text-center w-[10%]">${isSHS ? 'T1' : 'Q1'}</th>
+                                <th class="px-3 py-5 text-center w-[10%]">${isSHS ? 'T2' : 'Q2'}</th>
+                                <th class="px-3 py-5 text-center w-[10%]">${isSHS ? 'T3' : 'Q3'}</th>
+                                ${!isSHS ? `<th class="px-3 py-5 text-center w-[10%]">Q4</th>` : ''}
                                 <th class="px-3 py-5 text-center w-[15%] bg-blue-50/50 text-blue-900">Final</th>
                             </tr>
                         </thead>
@@ -1318,7 +1546,202 @@ window.renderQuickGradesTable = function (sy) {
 let _reportStudent = null;
 
 async function showReport(s) {
-    // Academic Report (Report cards) disabled globally as requested.
+    if (!s) return;
+    _reportStudent = s;
+    const modal = document.getElementById('report-modal');
+    const content = document.getElementById('report-content');
+    if (!modal || !content) return;
+
+    modal.setAttribute('data-lrn', s.lrn);
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // prevent bg scroll
+
+    // ── Auto-detect Year Level based on sections ──
+    const subjectToYearLevel = {
+        'AP 7': ['Grade 7'], 'MAPEH 7': ['Grade 7'], 'English 7': ['Grade 7'],
+        'Science 8': ['Grade 8'], 'Math 8': ['Grade 8'],
+        'Filipino 9': ['Grade 9'], 'TLE 9': ['Grade 9'],
+        'Math 10': ['Grade 10'], 'Science 10': ['Grade 10'],
+        'General Mathematics': ['Grade 11'], 'Oral Communication': ['Grade 11'],
+        'Business Finance': ['Grade 12'], 'Practical Research 2': ['Grade 12']
+    };
+
+    let guessedYear = '';
+    // Basic heuristics from section name
+    if (s.section) {
+        const sec = s.section.toLowerCase();
+        if (sec.includes('7')) guessedYear = 'Grade 7';
+        else if (sec.includes('8')) guessedYear = 'Grade 8';
+        else if (sec.includes('9')) guessedYear = 'Grade 9';
+        else if (sec.includes('10')) guessedYear = 'Grade 10';
+        else if (sec.includes('11')) guessedYear = 'Grade 11';
+        else if (sec.includes('12')) guessedYear = 'Grade 12';
+        
+        // Fallback: Check adviser
+        if (!guessedYear && typeof teachers !== 'undefined') {
+            const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(sec));
+            if (adv) {
+                if (adv.level === 'SH') guessedYear = 'Grade 11';
+                if (adv.level === 'JH') guessedYear = 'Grade 7';
+            }
+        }
+    }
+
+    // Refine with actual subjects if available
+    const detectedYears = new Set();
+    const allSubjectsInDB = s.subjects ? s.subjects.map(x => x.n) : [];
+    allSubjectsInDB.forEach(subName => {
+        const levels = subjectToYearLevel[subName];
+        if (levels) levels.forEach(y => detectedYears.add(y));
+    });
+
+    const allYearLevels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+
+    // If we confidently guessed the year based on Section, only show that exact year level.
+    if (!guessedYear && detectedYears.size > 0) {
+        let yearLevelsToShow = allYearLevels.filter(y => detectedYears.has(y));
+        guessedYear = yearLevelsToShow[yearLevelsToShow.length - 1];
+    }
+
+    // ── Auto-detect strand from section name ──
+    let guessedStrand = '';
+    const SH_STRANDS = ['Academic', 'TechPro'];
+    const secLower = (s.section || '').toLowerCase();
+    for (const st of SH_STRANDS) {
+        if (secLower.includes(st.toLowerCase())) { guessedStrand = st; break; }
+    }
+
+    // ── Sections dropdown ──
+    // Only show the student's enrolled section
+    const sectionOptions = s.section 
+        ? `<option value="${s.section}" selected>${s.section}</option>`
+        : `<option value="" selected>No Section Assigned</option>`;
+
+    // Only show the student's enrolled year level and previous grades
+    let activeYearsForStudent = new Set(detectedYears);
+    if (guessedYear) activeYearsForStudent.add(guessedYear);
+    
+    let yearsToShow = allYearLevels.filter(y => activeYearsForStudent.has(y));
+    let yearOptions = yearsToShow.map(y => 
+        `<option value="${y}" ${y === guessedYear ? 'selected' : ''}>${y}</option>`
+    ).join('');
+    
+    if (yearsToShow.length === 0) {
+        yearOptions = `<option value="" selected disabled>Unknown Year Level</option>`;
+    }
+
+    const strandOpts = SH_STRANDS.map(st =>
+        `<option value="${st}" ${st === guessedStrand ? 'selected' : ''}>${st}</option>`
+    ).join('');
+
+    const isSH = guessedYear === 'Grade 11' || guessedYear === 'Grade 12';
+
+    // ── If only 1 year level detected, show a subtle badge instead of dropdown ──
+    const noGradeNote = detectedYears.size === 0
+        ? `<p class="text-[10px] text-yellow-600 bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-1.5 mb-1"><i class="fas fa-info-circle mr-1"></i>No grades recorded yet.</p>`
+        : '';
+
+    // ── Generate School Year options dynamically based on exact history ──
+    const activeYears = new Set();
+    if (s.enrollment_history && Array.isArray(s.enrollment_history)) {
+        s.enrollment_history.forEach(h => { if (h.school_year) activeYears.add(h.school_year); });
+    }
+    if (s.section) activeYears.add(window.currentRecordSchoolYear || '2024-2025');
+
+    const sortedYears = [...activeYears].sort().reverse();
+    if (sortedYears.length === 0) sortedYears.push(window.currentRecordSchoolYear || '2024-2025');
+
+    const curYearSelect = window.currentRecordSchoolYear || sortedYears[0];
+    const schoolYearOptions = sortedYears.map(sy =>
+        `<option value="${sy}" ${sy === curYearSelect ? 'selected' : ''}>${sy}</option>`
+    ).join('');
+
+    content.innerHTML = `
+        <div class="flex justify-between items-start pb-4 mb-5 border-b border-gray-100 relative">
+            <div>
+                <h3 class="text-xl font-bold text-gray-900">${s.name}</h3>
+                <p class="text-xs text-gray-400 font-mono mt-0.5">LRN: ${s.lrn} | Section: ${s.section || '—'}</p>
+            </div>
+            <div id="qr-container-sel" class="p-1.5 border border-gray-200 rounded-lg bg-white ml-3 shrink-0"></div>
+            <button onclick="closeReport()" class="absolute -top-4 -right-4 w-8 h-8 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition flex items-center justify-center text-xs">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="space-y-4 mb-6">
+            ${noGradeNote}
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Year Level</label>
+                    <select id="report-grade-level" onchange="onReportGradeChange(this.value)"
+                        class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-primary bg-white cursor-pointer">
+                        ${yearOptions}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">School Year</label>
+                    <select id="report-school-year" onchange="onReportSchoolYearChange(this.value)"
+                        class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-primary bg-white cursor-pointer">
+                        ${schoolYearOptions}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Strand (SH only) -->
+            <div id="report-strand-wrap" class="${isSH ? '' : 'hidden'}">
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Strand / Track</label>
+                <select id="report-strand" onchange="onReportStrandChange(this.value)"
+                    class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-primary bg-white cursor-pointer">
+                    ${strandOpts}
+                </select>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Section</label>
+                <select id="report-section"
+                    class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-primary bg-white cursor-pointer">
+                    <option value="" disabled ${!s.section ? 'selected' : ''}>-- Select Section --</option>
+                    ${sectionOptions}
+                </select>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Grading Period</label>
+                <div class="grid grid-cols-3 gap-2">
+                   <button type="button" id="sembtn-1" onclick="selectSemester(1)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-primary bg-primary text-white">1st Sem</button>
+                   <button type="button" id="sembtn-2" onclick="selectSemester(2)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">2nd Sem</button>
+                   <button type="button" id="sembtn-3" onclick="selectSemester(3)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">All</button>
+                </div>
+            </div>
+
+            <!-- Subject preview strip -->
+            <div id="report-subject-preview" class="${guessedYear ? '' : 'hidden'}">
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Subjects for this Level</label>
+                <div id="report-subject-tags" class="flex flex-wrap gap-1"></div>
+            </div>
+        </div>
+
+        <button onclick="loadAcademicReport()" id="view-report-btn"
+            class="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-sm transition shadow-md hover:bg-primaryDark flex items-center justify-center gap-2">
+            <i class="fas fa-file-alt"></i> View Report
+        </button>
+    `;
+
+    // Render tiny QR
+    document.getElementById('qr-container-sel').innerHTML = '';
+    if (typeof QRCode !== 'undefined') {
+        new QRCode(document.getElementById('qr-container-sel'), {
+            text: s.lrn, width: 56, height: 56,
+            colorDark: '#166534', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+
+    // Default selected semester = 1
+    _reportStudent._selectedSemester = 1;
+
+    // Trigger initial subject preview if year detected
+    if (guessedYear) onReportGradeChange(guessedYear);
 }
 
 
@@ -1367,7 +1790,7 @@ function _refreshSubjectPreview() {
     const semester = _reportStudent?._selectedSemester || 1;
     const isSH = gradeNum >= 11;
     const level = isSH ? 'SH' : 'JH';
-    const strand = document.getElementById('report-strand')?.value || 'ABM';
+    const strand = document.getElementById('report-strand')?.value || 'Academic';
 
     let subjects = [];
     if (semester === 3) {
@@ -1406,11 +1829,19 @@ async function loadAcademicReport() {
     const btn = document.getElementById('view-report-btn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...'; }
 
+    const gradeNum = parseInt((gradeStr || '').replace(/\D/g, '')) || 0;
+    const isSH = gradeNum >= 11;
+
     let qs = [];
     let semLabel = '';
-    if (semester === 1) { qs = [1, 2]; semLabel = 'FIRST SEMESTER (Q1 & Q2)'; }
-    else if (semester === 2) { qs = [3, 4]; semLabel = 'SECOND SEMESTER (Q3 & Q4)'; }
-    else { qs = [1, 2, 3, 4]; semLabel = 'FULL ACADEMIC YEAR'; }
+    if (isSH) {
+        qs = [1, 2, 3];
+        semLabel = 'TRIMESTER (TERMS 1-3)';
+    } else {
+        if (semester === 1) { qs = [1, 2]; semLabel = 'FIRST SEMESTER (Q1 & Q2)'; }
+        else if (semester === 2) { qs = [3, 4]; semLabel = 'SECOND SEMESTER (Q3 & Q4)'; }
+        else { qs = [1, 2, 3, 4]; semLabel = 'FULL ACADEMIC YEAR'; }
+    }
 
     let qData = { 1: [], 2: [], 3: [], 4: [] };
     try {
@@ -1446,8 +1877,6 @@ async function loadAcademicReport() {
         return row && row.g != null ? parseFloat(row.g) : null;
     };
 
-    const gradeNum = parseInt((gradeStr || '').replace(/\D/g, '')) || 0;
-    const isSH = gradeNum >= 11;
     const level = isSH ? 'SH' : 'JH';
     const strand = document.getElementById('report-strand')?.value || null;
 
@@ -1568,9 +1997,9 @@ async function loadAcademicReport() {
 
                         <div class="mt-8 space-y-6">
                             <h3 class="text-[10px] font-bold uppercase border-b border-gray-800 pb-1">Parent's/Guardian's Signature</h3>
-                            ${[1, 2, 3, 4].map(q => `
+                            ${(isSH ? [1, 2, 3] : [1, 2, 3, 4]).map(q => `
                                 <div class="flex items-end gap-2 text-[10px]">
-                                    <span class="shrink-0 w-20">${q === 1 ? '1st' : q === 2 ? '2nd' : q === 3 ? '3rd' : '4th'} Quarter:</span>
+                                    <span class="shrink-0 w-20">${q === 1 ? '1st' : q === 2 ? '2nd' : q === 3 ? '3rd' : '4th'} ${isSH ? 'Term' : 'Quarter'}:</span>
                                     <div class="flex-1 border-b border-black h-4"></div>
                                 </div>
                             `).join('')}
@@ -1937,12 +2366,88 @@ async function openAttendanceModal(lrn) {
 
     // Fetch existing records
     let records = [];
+    currentAbsenceLogs = [];
     try {
         const res = await fetch(`/api/attendance/${lrn}`);
         if (res.ok) records = await res.json();
     } catch (e) { console.warn("Could not fetch attendance", e); }
 
+    // Aggregate daily_marks from all months
+    records.forEach(r => {
+        if (r.daily_marks) {
+            try {
+                let marks = typeof r.daily_marks === 'string' ? JSON.parse(r.daily_marks) : r.daily_marks;
+                if (Array.isArray(marks)) {
+                    currentAbsenceLogs = currentAbsenceLogs.concat(marks);
+                }
+            } catch (e) {}
+        }
+    });
+    // Deduplicate and sort
+    currentAbsenceLogs = [...new Set(currentAbsenceLogs)].sort((a, b) => new Date(b) - new Date(a));
+
     renderAttendanceTable(records);
+    renderAbsenceLogs();
+}
+
+let currentAbsenceLogs = [];
+
+function renderAbsenceLogs() {
+    const container = document.getElementById('absence-logs-container');
+    if (!container) return;
+    
+    if (currentAbsenceLogs.length === 0) {
+        container.innerHTML = '<div class="text-[10px] text-gray-400 italic text-center py-2 bg-gray-50 rounded border border-dashed border-gray-200">No specific absence logs recorded yet.</div>';
+        return;
+    }
+    
+    container.innerHTML = currentAbsenceLogs.map((log, i) => {
+        const dateObj = new Date(log);
+        const formatted = isNaN(dateObj) ? log : dateObj.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
+        return `
+            <div class="flex justify-between items-center bg-red-50 text-red-600 px-3 py-2 rounded-lg border border-red-100 text-xs font-medium">
+                <div class="flex items-center gap-2"><i class="fas fa-calendar-times opacity-50"></i> ${formatted}</div>
+                <button onclick="removeAbsenceLog(${i})" class="text-red-400 hover:text-red-700 transition" title="Remove log"><i class="fas fa-times"></i></button>
+            </div>
+        `;
+    }).join('');
+}
+
+function addAbsenceLog() {
+    const input = document.getElementById('new-absence-datetime');
+    if (!input || !input.value) return showMessage("Please select a valid date and time.", true);
+    
+    const dt = new Date(input.value).toISOString();
+    if (!currentAbsenceLogs.includes(dt)) {
+        currentAbsenceLogs.unshift(dt);
+        // Sort descending
+        currentAbsenceLogs.sort((a, b) => new Date(b) - new Date(a));
+        renderAbsenceLogs();
+        
+        // Auto-increment the absent count for the respective month if possible
+        const m = new Date(input.value).toLocaleString('en-US', { month: 'short' });
+        const row = document.getElementById(`att-row-${m}`);
+        if (row) {
+            const schoolInput = row.querySelector(`[data-field="school_days"]`);
+            const presentInput = row.querySelector(`[data-field="days_present"]`);
+            if (presentInput.value !== '' && schoolInput.value !== '') {
+                const s = parseInt(schoolInput.value);
+                let p = parseInt(presentInput.value);
+                if (p > 0) {
+                    presentInput.value = p - 1;
+                    updateAttTotals();
+                }
+            }
+        }
+    }
+    input.value = '';
+}
+
+function removeAbsenceLog(index) {
+    if (index > -1 && index < currentAbsenceLogs.length) {
+        currentAbsenceLogs.splice(index, 1);
+        renderAbsenceLogs();
+    }
 }
 
 function renderAttendanceTable(existingRecords) {
@@ -1951,7 +2456,7 @@ function renderAttendanceTable(existingRecords) {
 
     const rows = ATT_MONTHS.map(monthObj => {
         const month = monthObj.m;
-        const rec = existingRecords.find(r => r.month === month && r.school_year === sy) || { school_days: monthObj.d, days_present: monthObj.d };
+        const rec = existingRecords.find(r => r.month === month && r.school_year === sy) || { school_days: monthObj.d, days_present: '' };
 
         return `
             <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition" id="att-row-${month}">
@@ -1967,7 +2472,7 @@ function renderAttendanceTable(existingRecords) {
                         class="w-20 px-2 py-1 border border-gray-200 rounded outline-none focus:border-primary text-center font-mono font-bold text-primary">
                 </td>
                 <td class="px-4 py-3 font-mono text-gray-400" id="absent-${month}">
-                    ${rec.school_days - rec.days_present}
+                    ${rec.days_present === '' ? 0 : (rec.school_days - rec.days_present)}
                 </td>
             </tr>
         `;
@@ -1980,6 +2485,7 @@ function renderAttendanceTable(existingRecords) {
 function updateAttTotals() {
     let totalSchool = 0;
     let totalPresent = 0;
+    let totalAbsent = 0;
 
     ATT_MONTHS.forEach(m => {
         const month = m.m;
@@ -1987,18 +2493,20 @@ function updateAttTotals() {
         if (!row) return;
 
         const schoolVal = parseInt(row.querySelector(`[data-field="school_days"]`).value) || 0;
-        const presentVal = parseInt(row.querySelector(`[data-field="days_present"]`).value) || 0;
+        const presentInput = row.querySelector(`[data-field="days_present"]`);
+        const presentVal = presentInput.value === '' ? 0 : parseInt(presentInput.value);
 
-        const absent = schoolVal - presentVal;
+        const absent = presentInput.value === '' ? 0 : (schoolVal - presentVal);
         document.getElementById(`absent-${month}`).innerText = absent;
 
         totalSchool += schoolVal;
         totalPresent += presentVal;
+        totalAbsent += absent;
     });
 
     document.getElementById('att-total-school').innerText = totalSchool;
     document.getElementById('att-total-present').innerText = totalPresent;
-    document.getElementById('att-total-absent').innerText = totalSchool - totalPresent;
+    document.getElementById('att-total-absent').innerText = totalAbsent;
 }
 
 async function saveAttendanceRecord() {
@@ -2012,8 +2520,14 @@ async function saveAttendanceRecord() {
 
         const school_days = parseInt(row.querySelector(`[data-field="school_days"]`).value) || 0;
         const days_present = parseInt(row.querySelector(`[data-field="days_present"]`).value) || 0;
+        
+        // Find logs that belong to this month
+        const monthLogs = currentAbsenceLogs.filter(log => {
+            const dateObj = new Date(log);
+            return !isNaN(dateObj) && dateObj.toLocaleString('en-US', { month: 'short' }) === month;
+        });
 
-        records.push({ month, school_days, days_present, school_year: sy });
+        records.push({ month, school_days, days_present, school_year: sy, daily_marks: monthLogs });
     });
 
     const lrn = currentAttendanceLRN;
@@ -2031,6 +2545,24 @@ async function saveAttendanceRecord() {
                 const totalSchool = records.reduce((a, b) => a + b.school_days, 0);
                 const totalPresent = records.reduce((a, b) => a + b.days_present, 0);
                 s.attendance = totalSchool > 0 ? parseFloat(((totalPresent / totalSchool) * 100).toFixed(2)) : 0;
+
+                // Sync the saved monthly records into the local student object
+                if (!s.lastAttendanceRecords) s.lastAttendanceRecords = [];
+                records.forEach(rec => {
+                    const existingIdx = s.lastAttendanceRecords.findIndex(r => r.month === rec.month && r.school_year === rec.school_year);
+                    if (existingIdx !== -1) {
+                        s.lastAttendanceRecords[existingIdx].school_days = rec.school_days;
+                        s.lastAttendanceRecords[existingIdx].days_present = rec.days_present;
+                    } else {
+                        s.lastAttendanceRecords.push({
+                            month: rec.month,
+                            school_year: rec.school_year,
+                            school_days: rec.school_days,
+                            days_present: rec.days_present,
+                            daily_marks: []
+                        });
+                    }
+                });
 
                 // Save percentage to Student table main record
                 await fetch(`/api/students/${s.id}`, {
@@ -2079,3 +2611,154 @@ function completeStudentLogin(student) {
     window.location.href = '/student/dashboard';
 }
 
+window.activeUndoToasts = {};
+
+function showUndoToast(message, onUndo, onFinalize, timeout = 5000) {
+    const toastId = 'undo-' + Date.now();
+    
+    // Create toast container if not exists
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-2';
+        document.body.appendChild(container);
+    }
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    toast.className = 'bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-4 animate-slide-up text-sm font-medium';
+    toast.innerHTML = `
+        <span>${message}</span>
+        <button id="btn-${toastId}" class="text-primary font-bold hover:text-green-400 transition ml-2">Undo</button>
+    `;
+    container.appendChild(toast);
+    
+    let isReverted = false;
+    
+    const finalizeWrapper = async () => {
+        if (isReverted) return;
+        delete window.activeUndoToasts[toastId];
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+        if (onFinalize) await onFinalize();
+    };
+    
+    const timer = setTimeout(finalizeWrapper, timeout);
+    window.activeUndoToasts[toastId] = timer;
+    
+    document.getElementById(`btn-${toastId}`).onclick = async () => {
+        isReverted = true;
+        clearTimeout(timer);
+        delete window.activeUndoToasts[toastId];
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+        if (onUndo) await onUndo();
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GRADING WEIGHTS MODAL LOGIC
+// ─────────────────────────────────────────────────────────────────────────────
+
+function openGradingWeightsModal(subject) {
+    const s = (subject || '').toLowerCase();
+    const weights = getSubjectWeights(subject);
+    
+    const ww = Math.round(weights.ww * 100);
+    const pt = Math.round(weights.pt * 100);
+    const qa = Math.round(weights.qa * 100);
+
+    const modalHtml = `
+        <div id="grading-weights-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/40 backdrop-blur-sm animate-fade-in">
+            <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 animate-slide-up transform transition-all relative">
+                <button onclick="document.getElementById('grading-weights-modal').remove()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"><i class="fas fa-times"></i></button>
+                <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mb-4">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-800 mb-1">Edit Grading Weights</h3>
+                <p class="text-xs text-gray-500 mb-6 font-medium">Customize the percentage distribution for <b>${subject || 'this subject'}</b>. Must total 100%.</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Written Works (%)</label>
+                        <input type="number" id="gw-ww" value="${ww}" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 outline-none transition" oninput="updateGradingTotal()">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Performance Tasks (%)</label>
+                        <input type="number" id="gw-pt" value="${pt}" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 outline-none transition" oninput="updateGradingTotal()">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Assessment (%)</label>
+                        <input type="number" id="gw-qa" value="${qa}" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 outline-none transition" oninput="updateGradingTotal()">
+                    </div>
+                </div>
+
+                <div class="mt-4 p-3 rounded-xl bg-gray-50 border border-gray-100 flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-600">Total:</span>
+                    <span id="gw-total" class="text-sm font-black text-emerald-600">100%</span>
+                </div>
+                
+                <div class="mt-6 flex gap-3">
+                    <button onclick="saveGradingWeights('${subject}')" id="gw-save-btn" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-sm transition">Save Weights</button>
+                    <button onclick="resetGradingWeights('${subject}')" class="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl transition tooltip-trigger" title="Reset to DepEd Default"><i class="fas fa-undo"></i></button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function updateGradingTotal() {
+    const ww = parseInt(document.getElementById('gw-ww').value) || 0;
+    const pt = parseInt(document.getElementById('gw-pt').value) || 0;
+    const qa = parseInt(document.getElementById('gw-qa').value) || 0;
+    const total = ww + pt + qa;
+    
+    const totalEl = document.getElementById('gw-total');
+    const saveBtn = document.getElementById('gw-save-btn');
+    
+    totalEl.textContent = total + '%';
+    if (total === 100) {
+        totalEl.className = 'text-sm font-black text-emerald-600';
+        saveBtn.disabled = false;
+        saveBtn.className = 'flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-sm transition';
+    } else {
+        totalEl.className = 'text-sm font-black text-red-500';
+        saveBtn.disabled = true;
+        saveBtn.className = 'flex-1 py-3 bg-gray-300 text-gray-500 font-bold rounded-xl cursor-not-allowed';
+    }
+}
+
+function saveGradingWeights(subject) {
+    const ww = (parseInt(document.getElementById('gw-ww').value) || 0) / 100;
+    const pt = (parseInt(document.getElementById('gw-pt').value) || 0) / 100;
+    const qa = (parseInt(document.getElementById('gw-qa').value) || 0) / 100;
+    
+    if (ww + pt + qa !== 1) return;
+    
+    const s = (subject || '').toLowerCase();
+    localStorage.setItem('grading_weights_' + s, JSON.stringify({ ww, pt, qa }));
+    
+    document.getElementById('grading-weights-modal').remove();
+    showPremiumToast('success', 'Grading weights updated for ' + (subject || 'subject'));
+    
+    // Re-render records view
+    if (typeof renderRecords === 'function') {
+        renderRecords(document.getElementById('content-area'));
+    }
+}
+
+function resetGradingWeights(subject) {
+    const s = (subject || '').toLowerCase();
+    localStorage.removeItem('grading_weights_' + s);
+    
+    document.getElementById('grading-weights-modal').remove();
+    showPremiumToast('success', 'Reset to DepEd default weights');
+    
+    // Re-render records view
+    if (typeof renderRecords === 'function') {
+        renderRecords(document.getElementById('content-area'));
+    }
+}

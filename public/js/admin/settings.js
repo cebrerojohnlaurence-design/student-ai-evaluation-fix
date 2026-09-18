@@ -212,8 +212,11 @@ function renderProfileTab() {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block ml-1">Full Name</label>
-                    <div class="w-full px-5 py-4 bg-gray-50 rounded-2xl text-sm font-bold text-gray-700 border border-transparent">
-                        ${currentUser.name}
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="profile-fullname" value="${currentUser.name}" class="w-full px-5 py-4 bg-gray-50 rounded-2xl text-sm font-bold text-gray-700 border border-gray-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                        <button onclick="saveProfileName()" class="px-5 py-4 bg-primary text-white font-bold rounded-2xl hover:bg-primary-dark transition shadow-sm tooltip-trigger" title="Save Name">
+                            <i class="fas fa-save"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="space-y-1">
@@ -366,7 +369,7 @@ function renderQrCodeTab() {
             <div class="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-2xl border border-gray-200 mx-auto w-fit min-w-[250px] shadow-inner mt-4">
                 <div id="teacher-qr-container" class="bg-white p-4 rounded-xl shadow-sm mb-6 flex justify-center items-center h-[232px] w-[232px]"></div>
                 
-                <button onclick="downloadTeacherQrCode()" class="px-6 py-3 bg-action hover:bg-slate-800 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-md mx-auto">
+                <button onclick="downloadTeacherQrCode()" class="px-6 py-3 bg-action hover:bg-slate-800 text-black rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-md mx-auto">
                     <i class="fas fa-download"></i> Download QR Code
                 </button>
                 
@@ -472,4 +475,50 @@ async function saveTeacherQrPin() {
         btn.disabled = false;
         btn.innerHTML = 'Secure QR Code';
     }
+}
+
+async function saveProfileName() {
+    const newName = document.getElementById('profile-fullname').value.trim();
+    if (!newName) return triggerMockError('Name cannot be empty.');
+    
+    // Update global state
+    currentUser.name = newName;
+    
+    // Save to localStorage session
+    const userSession = JSON.parse(sessionStorage.getItem('cnhs_session') || '{}');
+    if (userSession.id) {
+        userSession.name = newName;
+        sessionStorage.setItem('cnhs_session', JSON.stringify(userSession));
+    }
+    
+    // Update top sidebar display
+    const displayNameEl = document.getElementById('user-display-name');
+    if (displayNameEl) displayNameEl.innerText = newName;
+
+    // If teacher, attempt to save to backend / system_teachers
+    if (currentUser.role === 'teacher' || currentUser.role === 'curriculum_coordinator' || currentUser.id.startsWith('T-') || currentUser.id.startsWith('JHS-')) {
+        let storedTeachers = JSON.parse(localStorage.getItem('system_teachers') || 'null');
+        if (storedTeachers) {
+            const t = storedTeachers.find(x => x.id === currentUser.id);
+            if (t) {
+                t.name = newName;
+                localStorage.setItem('system_teachers', JSON.stringify(storedTeachers));
+            }
+        }
+        
+        // Also try backend for real DB teachers
+        if (currentUser.db_id) {
+            try {
+                await fetch(`/api/teachers/${currentUser.db_id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName })
+                });
+            } catch (e) {
+                console.warn('Failed to save name to backend DB', e);
+            }
+        }
+    }
+    
+    triggerMockSuccess('Profile name updated successfully!');
 }

@@ -38,6 +38,7 @@ function renderAddStudent(container) {
                         <div class="md:col-span-5"><label class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">First Name</label><input type="text" id="m-first" required class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:bg-white focus:border-primary outline-none transition shadow-sm" placeholder="e.g. Juan"></div>
                         <div class="md:col-span-2"><label class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">M.I.</label><input type="text" id="m-mi" maxlength="2" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:bg-white focus:border-primary outline-none transition shadow-sm text-center" placeholder="P."></div>
                     </div>
+                    <div id="dynamic-student-fields" class="space-y-4 w-full"></div>
                     <div class="flex justify-end">
                         <button type="submit" id="save-student-btn" class="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold tracking-wide transition shadow-md hover:shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2">
                             <i class="fas fa-plus-circle"></i> Save Student
@@ -80,9 +81,24 @@ function renderAddStudent(container) {
                     </table>
                 </div>
             </div>
-        </div>
     `;
     renderAddStudentTable();
+    
+    // Render dynamic fields
+    const dynamicContainer = document.getElementById('dynamic-student-fields');
+    if (dynamicContainer && typeof globalSettings !== 'undefined' && globalSettings.student_fields) {
+        try {
+            const fields = JSON.parse(globalSettings.student_fields);
+            if (Array.isArray(fields) && fields.length > 0) {
+                dynamicContainer.innerHTML = fields.map(field => `
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">${field}</label>
+                        <input type="text" id="m-custom-${field}" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:bg-white focus:border-primary outline-none transition shadow-sm" placeholder="Enter ${field}">
+                    </div>
+                `).join('');
+            }
+        } catch (e) {}
+    }
 }
 
 async function manualAdd(e) {
@@ -98,17 +114,35 @@ async function manualAdd(e) {
     const l = document.getElementById('m-last').value.trim();
     const f = document.getElementById('m-first').value.trim();
     const m = document.getElementById('m-mi').value.trim();
-    const name = `${l}, ${f}${m ? ' ' + m + '.' : ''}`;
+    const fullName = `${l}, ${f}${m ? ' ' + m + '.' : ''}`;
 
-    // Disable button to prevent double submit
-    const btn = document.getElementById('save-student-btn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; }
+    // Collect dynamic custom fields if any
+    let customData = {};
+    document.querySelectorAll('#dynamic-student-fields input').forEach(input => {
+        customData[input.id.replace('m-custom-', '')] = input.value.trim();
+    });
+
+    const payload = {
+        lrn: lrn,
+        name: fullName,
+        custom_fields: customData,
+        section: null,
+        adviser: 'Pending Assignment'
+    };
 
     try {
+        const btn = document.getElementById('save-student-btn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        btn.disabled = true;
+
         const res = await fetch('/api/students', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ lrn, name, section: null, adviser: 'Pending Assignment' })
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+            },
+            body: JSON.stringify(payload)
         });
 
         const data = await res.json();
@@ -140,18 +174,36 @@ async function manualAdd(e) {
 
 async function deleteStudentFromDB(id, lrn) {
     if (!confirm('Delete this student?')) return;
-    try {
-        const res = await fetch(`/api/students/${id}`, { method: 'DELETE', headers: { 'Accept': 'application/json' } });
-        if (res.ok) {
-            students = students.filter(s => s.lrn !== lrn);
-            showMessage('Student removed.');
+    
+    const studentToRestore = students.find(s => s.lrn === lrn);
+    if (!studentToRestore) return;
+    
+    // Optimistically remove from UI
+    students = students.filter(s => s.lrn !== lrn);
+    navigate('add-student');
+    
+    showUndoToast(`Deleted student ${studentToRestore.name}`, 
+    async () => {
+        // Undo Action
+        students.push(studentToRestore);
+        navigate('add-student');
+        showMessage('Student restored.');
+    }, 
+    async () => {
+        // Finalize Action
+        try {
+            const res = await fetch(`/api/students/${id}`, { method: 'DELETE', headers: { 'Accept': 'application/json' } });
+            if (!res.ok) {
+                showMessage('Failed to delete student.', true);
+                students.push(studentToRestore);
+                navigate('add-student');
+            }
+        } catch {
+            showMessage('Network error.', true);
+            students.push(studentToRestore);
             navigate('add-student');
-        } else {
-            showMessage('Failed to delete student.', true);
         }
-    } catch {
-        showMessage('Network error.', true);
-    }
+    });
 }
 
 function toggleAllStudents(source) {

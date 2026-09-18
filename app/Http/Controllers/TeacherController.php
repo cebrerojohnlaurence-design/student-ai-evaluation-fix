@@ -18,6 +18,14 @@ class TeacherController extends Controller
     }
 
     /**
+     * Teacher Activity Logs page.
+     */
+    public function activityLogs()
+    {
+        return view('teacher.activityLogs');
+    }
+
+    /**
      * Add Students page (teacher view).
      */
     public function addStudents()
@@ -384,6 +392,54 @@ class TeacherController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * GET /api/teachers/submitted-grades — Return teachers and whether they've encoded grades.
+     */
+    public function submittedGrades(Request $request)
+    {
+        $schoolYear = $request->query('school_year', '2025-2026');
+        
+        $teachers = Teacher::all()->map(function ($t) use ($schoolYear) {
+            $section = $t->section;
+            $subject = $t->subject;
+            
+            if ($schoolYear && $t->assignment_history) {
+                $history = is_string($t->assignment_history) ? json_decode($t->assignment_history, true) : $t->assignment_history;
+                if (is_array($history)) {
+                    $found = collect($history)->firstWhere('school_year', $schoolYear);
+                    if ($found) {
+                        $section = $found['section'] ?? null;
+                        $subject = $found['subject'] ?? null;
+                    }
+                }
+            }
+
+            if (!$section || !$subject) {
+                return null; // Not teaching a subject/section this year
+            }
+
+            // Check if any student in this section has grades for this subject
+            $hasGrades = \App\Models\StudentSubject::where('subject_name', $subject)
+                ->where('school_year', $schoolYear)
+                ->whereHas('student', function ($query) use ($section, $schoolYear) {
+                    // This is an approximation. If the student is in this section for this school_year
+                    $query->where('section', $section); // Note: Should ideally check enrollment_history for accuracy
+                })
+                ->whereNotNull('grade')
+                ->exists();
+
+            return [
+                'name' => $t->name,
+                'section' => $section,
+                'subject' => $subject,
+                'status' => $hasGrades ? 'Submitted' : 'Pending',
+                'is_adviser' => (bool)$t->is_adviser
+            ];
+        })->filter()->values();
+
+        return response()->json($teachers);
     }
 }
 

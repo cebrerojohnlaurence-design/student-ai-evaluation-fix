@@ -22,6 +22,7 @@ class Student extends Model
         'plain_password',
         'qr_pin',
         'profile_picture',
+        'address',
     ];
 
     protected $hidden = ['password', 'qr_pin'];

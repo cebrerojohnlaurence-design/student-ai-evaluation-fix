@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System ERD</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            background: #f4f7f6;
+            padding: 40px;
+            color: #333;
+        }
+
+        #erd-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            display: inline-block;
+            margin-top: 20px;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            margin: 0 0 10px 0;
+            color: #1a4f36;
+            /* Matching the green theme from your system */
+        }
+
+        p {
+            color: #666;
+            margin-top: 0;
+        }
+
+        button {
+            background: #1a4f36;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(26, 79, 54, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: #123826;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 10px rgba(26, 79, 54, 0.3);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(26, 79, 54, 0.2);
+        }
+
+        /* Hide the ugly mermaid error box if it flashes */
+        .mermaid {
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h2>Updated System ERD</h2>
+        <p>Incorporating new roles: Principal, Curriculum Coordinator, Teacher, Student</p>
+        <button onclick="downloadPNG()">Download ERD as PNG</button>
+    </div>
+
+    <div id="erd-container">
+        <!-- We use mermaid.js to render the ERD nicely in HTML -->
+        <div class="mermaid" id="mermaid-diagram">
+            erDiagram
+            USER ||--o| STUDENT : "has profile"
+            USER ||--o| TEACHER : "has profile"
+            USER ||--o| STAFF : "has profile (Principal/Coordinator)"
+
+            STUDENT {
+            int id PK
+            string name
+            date date_of_birth
+            string gender
+            string lrn
+            }
+
+            TEACHER {
+            int id PK
+            string name
+            string department
+            string teacher_code
+            }
+
+            STAFF {
+            int id PK
+            string name
+            string position "Principal, JHS Coordinator, etc."
+            }
+
+            USER {
+            int id PK
+            string username
+            string password_hash
+            string role "Principal, Coordinator, Teacher, Student"
+            string status
+            }
+
+            SUBJECT {
+            int id PK
+            string code
+            string name
+            string type "Core, Applied, Specialized"
+            }
+
+            SECTION {
+            int id PK
+            string name
+            string grade_level
+            string semester
+            string school_year
+            int adviser_id FK
+            }
+
+            ENROLLMENT {
+            int id PK
+            int student_id FK
+            int section_id FK
+            string semester
+            string school_year
+            }
+
+            ATTENDANCE {
+            int id PK
+            date date
+            string status "Present, Absent"
+            int student_id FK
+            int section_id FK
+            }
+
+            GRADE {
+            int id PK
+            float q1_score
+            float q2_score
+            float q3_score
+            float q4_score
+            float final_grade
+            string remarks
+            int student_id FK
+            int subject_id FK
+            int section_id FK
+            }
+
+            AI_ANALYSIS {
+            int id PK
+            string risk_level
+            string prediction_factors
+            date analysis_date
+            int student_id FK
+            }
+
+            TEACHER ||--o{ SECTION : "advises"
+            STUDENT ||--o{ ENROLLMENT : "enrolled in"
+            SECTION ||--o{ ENROLLMENT : "has"
+            STUDENT ||--o{ ATTENDANCE : "recorded for"
+            SECTION ||--o{ ATTENDANCE : "has"
+            STUDENT ||--o{ GRADE : "receives"
+            SECTION ||--o{ GRADE : "awards"
+            SUBJECT ||--o{ GRADE : "for"
+            STUDENT ||--o{ AI_ANALYSIS : "analyzed by AI"
+        </div>
+    </div>
+
+    <!-- Mermaid library for generating diagrams -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#e8f5e9',
+                primaryTextColor: '#1a4f36',
+                primaryBorderColor: '#1a4f36',
+                lineColor: '#666666',
+                secondaryColor: '#f4f7f6',
+                tertiaryColor: '#fff'
+            }
+        });
+    </script>
+
+    <!-- html2canvas library for downloading the div as a PNG -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        function downloadPNG() {
+            const container = document.getElementById('erd-container');
+            const button = document.querySelector('button');
+            button.innerText = "Generating PNG...";
+            button.style.opacity = "0.7";
+
+            // Allow a small delay to ensure rendering is complete
+            setTimeout(() => {
+                html2canvas(container, {
+                    backgroundColor: "#ffffff",
+                    scale: 2, // High resolution
+                    logging: false
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'updated_system_erd.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+
+                    button.innerText = "Download ERD as PNG";
+                    button.style.opacity = "1";
+                });
+            }, 500);
+        }
+    </script>
+</body>
+
+</html>

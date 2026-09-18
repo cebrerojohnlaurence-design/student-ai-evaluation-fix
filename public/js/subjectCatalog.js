@@ -1,7 +1,7 @@
 /**
  * subjectCatalog.js — CNHS Subject Catalog
  * Central subject list for Junior High (Grade 7–10) and
- * Senior High (ABM, STEM, GAS, TVL, HUMSS) by grade & semester.
+ * Senior High (Academic, TechPro) by grade & semester.
  *
  * Semester 1 = Q1 + Q2 | Semester 2 = Q3 + Q4
  * Use getSubjectsForReport(level, strand, grade, semester) to retrieve the list.
@@ -31,7 +31,7 @@ const SUBJECT_CATALOG = {
     // ─── SENIOR HIGH ─────────────────────────────────────────────────────────
     SH: {
 
-        ABM: {
+        Academic: {
             11: {
                 sem1: [ // Q1 & Q2
                     'Oral Communication',
@@ -42,8 +42,8 @@ const SUBJECT_CATALOG = {
                     'Physical Education and Health',
                     'Empowerment Technologies',
                     'Filipino sa Piling Larang',
+                    'Pre-Calculus',
                     'Organization and Management',
-                    'Business Math',
                 ],
                 sem2: [ // Q3 & Q4
                     'Reading and Writing Skills',
@@ -52,10 +52,9 @@ const SUBJECT_CATALOG = {
                     'Physical Science',
                     'Personal Development',
                     'Physical Education and Health',
-                    'Entrepreneurship',
+                    'Basic Calculus',
                     'Practical Research 1',
                     'Fundamentals of Accountancy, Business and Management 1',
-                    'Principles of Marketing',
                 ],
             },
             12: {
@@ -66,204 +65,128 @@ const SUBJECT_CATALOG = {
                     'Physical Education and Health',
                     'English for Academic and Professional Purposes',
                     'Practical Research 2',
-                    'Fundamentals of Accountancy, Business and Management 2',
+                    'General Physics 1',
                     'Applied Economics',
                 ],
                 sem2: [ // Q3 & Q4
                     'Media and Information Literacy',
                     'Physical Education and Health',
                     'Inquiries, Investigations and Immersion',
-                    'Business Finance',
-                    'Business Ethics and Social Responsibility',
+                    'General Physics 2',
                     'Business Enterprise Simulation / Work Immersion',
                 ],
             },
         },
 
-        STEM: {
+        TechPro: {
             11: {
-                sem1: [
+                sem1: [ // Q1 & Q2
                     'Oral Communication',
                     'Komunikasyon at Pananaliksik sa Wika at Kulturang Pilipino',
                     'General Mathematics',
-                    'Earth Science',
+                    'Earth and Life Sciences',
                     '21st Century Literature from the Philippines and the World',
                     'Physical Education and Health',
                     'Empowerment Technologies',
-                    'Filipino sa Piling Larang',
-                    'Pre-Calculus',
-                    'General Biology 1',
-                    'Human Biology 1',
-                    'Complex Numbers',
+                    'Technical Drafting 1',
+                    'Computer Systems Servicing 1',
                 ],
-                sem2: [
-                    'Reading and Writing Skills',
-                    "Pagbasa at Pagsusuri ng Iba't Ibang Teksto Tungo sa Pananaliksik",
-                    'Statistics and Probability',
-                    'Disaster Readiness and Risk Reduction',
-                    'Personal Development',
-                    'Physical Education and Health',
-                    'Practical Research 1',
-                    'Entrepreneurship',
-                    'Basic Calculus',
-                    'General Biology 2',
-                    'Human Biology 2',
-                    'Vectors and the Geometry of Space',
-                ],
-            },
-            12: {
-                sem1: [
-                    'Introduction to the Philosophy of the Human Person',
-                    'Contemporary Philippine Arts from the Regions',
-                    'Understanding Culture, Society and Politics',
-                    'Physical Education and Health',
-                    'Practical Research 2',
-                    'English for Academic and Special Purposes',
-                    'General Physics 1',
-                    'General Chemistry 1',
-                    'Human Biology 3',
-                    'Differential Equations',
-                ],
-                sem2: [
-                    'Media and Information Literacy',
-                    'Physical Education and Health',
-                    'Inquiries, Investigations and Immersion',
-                    'General Physics 2',
-                    'General Chemistry 2',
-                    'Work Immersion / Research / Career Advocacy / Culminating Activity',
-                    'Biochemistry',
-                ],
-            },
-        },
-
-        GAS: {
-            11: {
-                sem1: [
-                    'Oral Communication',
-                    'Komunikasyon at Pananaliksik sa Wika at Kulturang Pilipino',
-                    'General Mathematics',
-                    'Earth and Life Science',
-                    'Understanding Culture, Society and Politics',
-                    'Personal Development',
-                    'Physical Education and Health',
-                    'Entrepreneurship',
-                    'Organization and Management',
-                ],
-                sem2: [
+                sem2: [ // Q3 & Q4
                     'Reading and Writing Skills',
                     "Pagbasa at Pagsusuri ng Iba't Ibang Teksto Tungo sa Pananaliksik",
                     'Statistics and Probability',
                     'Physical Science',
+                    'Personal Development',
                     'Physical Education and Health',
-                    'Media and Information Literacy',
-                    'Practical Research 1',
-                    'Fundamentals of Accountancy, Business and Management 1',
+                    'Technical Drafting 2',
+                    'Computer Systems Servicing 2',
                 ],
             },
             12: {
-                sem1: [
+                sem1: [ // Q1 & Q2
                     'Introduction to the Philosophy of the Human Person',
                     'Contemporary Philippine Arts from the Regions',
+                    'Understanding Culture, Society and Politics',
                     'Physical Education and Health',
                     'English for Academic and Professional Purposes',
                     'Practical Research 2',
-                    'Empowerment Technologies',
-                    'Applied Economics',
-                    'Fundamentals of Accountancy, Business and Management 2',
-                    'Principles of Marketing',
+                    'Food and Beverage Services',
                 ],
-                sem2: [
-                    '21st Century Literature from the Philippines and the World',
+                sem2: [ // Q3 & Q4
+                    'Media and Information Literacy',
                     'Physical Education and Health',
                     'Inquiries, Investigations and Immersion',
-                    'Pagsulat sa Filipino sa Piling Larangan Akademik',
-                    'Business Ethics and Social Responsibility',
-                    'Business Finance',
-                    'Business Enterprise Simulation / Work Immersion',
+                    'Work Immersion',
                 ],
             },
         },
-
-        TVL: {
-            11: {
-                sem1: [], // To be added
-                sem2: [], // To be added
-            },
-            12: {
-                sem1: [], // To be added
-                sem2: [], // To be added
-            },
-        },
-
-        HUMSS: {
-            11: {
-                sem1: [], // To be added
-                sem2: [], // To be added
-            },
-            12: {
-                sem1: [], // To be added
-                sem2: [], // To be added
-            },
-        },
-    },
+    }
 };
 
 /**
  * Get subjects for the academic report based on selection.
  * @param {string} level     - 'JH' or 'SH'
- * @param {string} strand    - 'ABM', 'STEM', 'GAS', 'TVL', 'HUMSS' (only for SH)
+ * @param {string} strand    - 'Academic', 'TechPro' (only for SH)
  * @param {number} grade     - 7-12
  * @param {number} semester  - 1 or 2
  * @returns {string[]}  Array of subject names
  */
 function getSubjectsForReport(level, strand, grade, semester) {
-    // Load any custom overrides from localStorage
-    let custom = {};
-    try {
-        const saved = localStorage.getItem('cnhs_subject_catalog_custom');
-        if (saved) custom = JSON.parse(saved);
-    } catch { /* ignore */ }
-
-    const semKey = semester === 1 ? 'sem1' : 'sem2';
-
     if (level === 'JH') {
-        const gradeData = SUBJECT_CATALOG.JH[grade];
-        const base = gradeData ? gradeData.subjects.slice() : SUBJECT_CATALOG.JH.subjects.slice();
-        const customKey = `JH_${grade}`;
-        if (custom[customKey]) return custom[customKey];
-        return base;
+        if (SUBJECT_CATALOG.JH[grade]) {
+            return SUBJECT_CATALOG.JH[grade].subjects;
+        }
+        return SUBJECT_CATALOG.JH.subjects;
     }
 
     if (level === 'SH' && strand && SUBJECT_CATALOG.SH[strand]) {
         const gradeData = SUBJECT_CATALOG.SH[strand][grade];
-        if (!gradeData) return [];
-        const base = (gradeData[semKey] || []).slice();
-        const customKey = `SH_${strand}_${grade}_${semKey}`;
-        if (custom[customKey]) return custom[customKey];
-        return base;
+        if (gradeData) {
+            // Under the new 3-Term (Trimester) system, SHS subjects are taught across the academic year.
+            return [...(gradeData.sem1 || []), ...(gradeData.sem2 || [])];
+        }
     }
-
     return [];
 }
 
 /**
- * Save a custom subject list to localStorage for a given key.
- * @param {string} key   - e.g. 'JH_7', 'SH_ABM_11_sem1'
- * @param {string[]} list
+ * Get JHS or SHS pre-defined subjects array (legacy helper)
+ * @param {string} key   - e.g. 'JH_7', 'SH_Academic_11_sem1'
+ * @returns {string[]}
  */
-function saveCustomSubjectList(key, list) {
-    let custom = {};
-    try {
-        const saved = localStorage.getItem('cnhs_subject_catalog_custom');
-        if (saved) custom = JSON.parse(saved);
-    } catch { /* ignore */ }
-    custom[key] = list;
-    localStorage.setItem('cnhs_subject_catalog_custom', JSON.stringify(custom));
+function getSubjectsByKey(key) {
+    if (key.startsWith('JH_')) {
+        const g = key.split('_')[1];
+        if (SUBJECT_CATALOG.JH[g]) return SUBJECT_CATALOG.JH[g].subjects;
+        return SUBJECT_CATALOG.JH.subjects;
+    }
+    // Expected: SH_Academic_11_sem1
+    if (key.startsWith('SH_')) {
+        const parts = key.split('_');
+        if (parts.length === 4) {
+            const s = parts[1];
+            const g = parseInt(parts[2]);
+            const sem = parts[3]; // sem1 or sem2
+            if (SUBJECT_CATALOG.SH[s] && SUBJECT_CATALOG.SH[s][g]) {
+                return SUBJECT_CATALOG.SH[s][g][sem] || [];
+            }
+        }
+    }
+    return [];
 }
 
 /**
  * Returns all unique strands in SH.
  */
-const SH_STRANDS = ['ABM', 'STEM', 'GAS', 'TVL', 'HUMSS'];
+const SH_STRANDS = ['Academic', 'TechPro'];
 const JH_GRADES = [7, 8, 9, 10];
 const SH_GRADES = [11, 12];
+
+if (typeof window !== 'undefined') {
+    window.SUBJECT_CATALOG = SUBJECT_CATALOG;
+    window.SH_STRANDS = SH_STRANDS;
+    window.JH_GRADES = JH_GRADES;
+    window.SH_GRADES = SH_GRADES;
+    window.getSubjectsForReport = getSubjectsForReport;
+    window.getSubjectsByKey = getSubjectsByKey;
+}

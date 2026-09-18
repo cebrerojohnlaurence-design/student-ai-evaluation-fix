@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Data Dictionary</title>
+    <style>
+        body { 
+            font-family: "Times New Roman", Times, serif; 
+            margin: 40px auto; 
+            max-width: 800px;
+            line-height: 1.6; 
+            color: #000;
+        }
+        h2 { text-align: center; margin-bottom: 20px; }
+        h3 { margin-bottom: 10px; font-size: 1.1em; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 10px; 
+        }
+        th, td { 
+            border-bottom: 1px solid #000; 
+            border-top: 1px solid #000; 
+            padding: 8px 10px; 
+            text-align: left; 
+            vertical-align: top;
+        }
+        th { font-weight: bold; }
+        .table-description { 
+            margin-bottom: 40px; 
+            text-indent: 30px; 
+            text-align: justify;
+        }
+        .intro { 
+            text-indent: 30px; 
+            margin-bottom: 40px; 
+            text-align: justify;
+        }
+        @media print { 
+            .no-print { display: none; } 
+            body { margin: 0; max-width: 100%; }
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn { 
+            padding: 10px 20px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin: 0 10px;
+        }
+        .btn:hover { background-color: #1b5e20; }
+    </style>
+</head>
+<body>
+
+    <div class="controls no-print">
+        <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+        <button class="btn" onclick="copyToClipboard()">Copy All Text (for Word)</button>
+        <p style="font-size: 0.9em; color: #555;"><em>Clicking 'Copy All Text' will select the entire dictionary so you can directly paste it into your MS Word manuscript.</em></p>
+    </div>
+
+    <div id="dictionary-content">
+        <h2>Data Dictionary</h2>
+        
+        <p class="intro">
+            This Data Dictionary provides specific details regarding the configuration and composition of the underlying database for the AI-Integrated Web-Based Student Grade Evaluation System. It documents each table, detailing its specific fields, corresponding data types, and primary function within the platform. The definitions in this section describe how the system maintains and organizes core data, including information on user roles, student metrics, academic results, and attendance records, enabling features like role-based access control, QR code integration, and intelligent student performance analytics.
+        </p>
+
+        <h3>Table 1: Users Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for each user</td></tr>
+            <tr><td>username</td><td>VARCHAR</td><td>User's login username</td></tr>
+            <tr><td>password</td><td>VARCHAR</td><td>Encrypted password for authentication</td></tr>
+            <tr><td>role</td><td>VARCHAR</td><td>The specific access level of the user (e.g., principal, coordinator, teacher)</td></tr>
+            <tr><td>status</td><td>VARCHAR</td><td>Current account status (e.g., active, inactive)</td></tr>
+            <tr><td>created_at</td><td>TIMESTAMP</td><td>Date and time the account was created</td></tr>
+        </table>
+        <p class="table-description">This table manages the core account information for anyone accessing the platform. It holds the primary login credentials and roles that allow the system to verify identities and provide a secure environment based on role-based access controls.</p>
+
+        <h3>Table 2: Principals Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the principal record</td></tr>
+            <tr><td>user_id</td><td>BIGINT(FK)</td><td>Reference to the Users table</td></tr>
+            <tr><td>employee_id</td><td>VARCHAR</td><td>Professional identification number</td></tr>
+            <tr><td>first_name</td><td>VARCHAR</td><td>First name of the principal</td></tr>
+            <tr><td>last_name</td><td>VARCHAR</td><td>Last name of the principal</td></tr>
+        </table>
+        <p class="table-description">Stores the professional profiles of school principals, linking their administrative details to their system login credentials.</p>
+
+        <h3>Table 3: Coordinators Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the coordinator</td></tr>
+            <tr><td>user_id</td><td>BIGINT(FK)</td><td>Reference to the Users table</td></tr>
+            <tr><td>employee_id</td><td>VARCHAR</td><td>Professional identification number</td></tr>
+            <tr><td>first_name</td><td>VARCHAR</td><td>First name of the coordinator</td></tr>
+            <tr><td>last_name</td><td>VARCHAR</td><td>Last name of the coordinator</td></tr>
+            <tr><td>department</td><td>VARCHAR</td><td>The specific department they coordinate (e.g., JHS, SHS)</td></tr>
+        </table>
+        <p class="table-description">Contains the profiles of curriculum coordinators, tracking their designated departments and linking to their main user account.</p>
+
+        <h3>Table 4: Teachers Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the teacher record</td></tr>
+            <tr><td>user_id</td><td>BIGINT(FK)</td><td>Reference to the Users table</td></tr>
+            <tr><td>employee_id</td><td>VARCHAR</td><td>Professional ID number of the teacher</td></tr>
+            <tr><td>first_name</td><td>VARCHAR</td><td>First name of the teacher</td></tr>
+            <tr><td>last_name</td><td>VARCHAR</td><td>Last name of the teacher</td></tr>
+            <tr><td>department</td><td>VARCHAR</td><td>The department the teacher belongs to</td></tr>
+            <tr><td>is_adviser</td><td>BOOLEAN</td><td>Flag indicating if the teacher handles an advisory class</td></tr>
+        </table>
+        <p class="table-description">Faculty profiles are organized here to link educators with their credentials. It identifies their specific department and highlights whether they are currently assigned as class advisers.</p>
+
+        <h3>Table 5: Students Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for each student</td></tr>
+            <tr><td>user_id</td><td>BIGINT(FK)</td><td>Reference to the Users table</td></tr>
+            <tr><td>lrn</td><td>VARCHAR</td><td>Learner Reference Number</td></tr>
+            <tr><td>first_name</td><td>VARCHAR</td><td>First name of the student</td></tr>
+            <tr><td>last_name</td><td>VARCHAR</td><td>Last name of the student</td></tr>
+            <tr><td>middle_initial</td><td>VARCHAR</td><td>Middle initial of the student</td></tr>
+            <tr><td>gender</td><td>VARCHAR</td><td>Gender of the student</td></tr>
+            <tr><td>birth_date</td><td>DATE</td><td>Date of birth of the student</td></tr>
+        </table>
+        <p class="table-description">The primary details for every enrolled learner are stored in this registry. It captures the identity of the student alongside their unique LRN, which is essential for managing academic data and utilizing the QR-based entry features of the system.</p>
+
+        <h3>Table 6: Subjects Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the subject</td></tr>
+            <tr><td>code</td><td>VARCHAR</td><td>Unique subject code</td></tr>
+            <tr><td>name</td><td>VARCHAR</td><td>Descriptive name of the subject</td></tr>
+            <tr><td>grade_level</td><td>VARCHAR</td><td>The grade level this subject belongs to</td></tr>
+            <tr><td>type</td><td>VARCHAR</td><td>Category of the subject (e.g., core, applied)</td></tr>
+        </table>
+        <p class="table-description">This catalog stores all the academic subjects offered by the school, categorized efficiently by their specific grade level and curriculum type.</p>
+
+        <h3>Table 7: Sections Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the class section</td></tr>
+            <tr><td>name</td><td>VARCHAR</td><td>Name of the section (e.g., Emerald)</td></tr>
+            <tr><td>grade_level</td><td>VARCHAR</td><td>The grade level for this section</td></tr>
+            <tr><td>school_year</td><td>VARCHAR</td><td>The academic year of the section</td></tr>
+            <tr><td>adviser_id</td><td>BIGINT(FK)</td><td>Reference to the assigned advisory teacher</td></tr>
+        </table>
+        <p class="table-description">Manages the class sections created for each academic year. It associates a specific grade level with each section and assigns a dedicated teacher as the class adviser.</p>
+
+        <h3>Table 8: Section Subjects Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the record</td></tr>
+            <tr><td>section_id</td><td>BIGINT(FK)</td><td>Reference to the Sections table</td></tr>
+            <tr><td>subject_id</td><td>BIGINT(FK)</td><td>Reference to the Subjects table</td></tr>
+            <tr><td>teacher_id</td><td>BIGINT(FK)</td><td>Reference to the assigned Teacher</td></tr>
+        </table>
+        <p class="table-description">A mapping table that explicitly defines the class schedule by assigning which teacher is responsible for teaching a specific subject within a particular class section.</p>
+
+        <h3>Table 9: Enrollments Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the enrollment record</td></tr>
+            <tr><td>student_id</td><td>BIGINT(FK)</td><td>Reference to the Student</td></tr>
+            <tr><td>section_id</td><td>BIGINT(FK)</td><td>Reference to the assigned Section</td></tr>
+            <tr><td>school_year</td><td>VARCHAR</td><td>The academic year of enrollment</td></tr>
+            <tr><td>status</td><td>VARCHAR</td><td>Current enrollment status (e.g., Enrolled, Dropped)</td></tr>
+        </table>
+        <p class="table-description">Records the enrollment history of students, successfully grouping them into specific class sections for a given school year to monitor their academic journey.</p>
+
+        <h3>Table 10: Grades Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the grade record</td></tr>
+            <tr><td>student_id</td><td>BIGINT(FK)</td><td>Reference to the Student</td></tr>
+            <tr><td>subject_id</td><td>BIGINT(FK)</td><td>Reference to the Subject</td></tr>
+            <tr><td>section_id</td><td>BIGINT(FK)</td><td>Reference to the Section</td></tr>
+            <tr><td>quarter</td><td>INT</td><td>The grading quarter (e.g., 1, 2, 3, 4)</td></tr>
+            <tr><td>written_score</td><td>DECIMAL</td><td>Total score for written works</td></tr>
+            <tr><td>performance_score</td><td>DECIMAL</td><td>Total score for performance tasks</td></tr>
+            <tr><td>assessment_score</td><td>DECIMAL</td><td>Total score for quarterly assessments</td></tr>
+            <tr><td>final_grade</td><td>DECIMAL</td><td>Computed final grade for the quarter</td></tr>
+        </table>
+        <p class="table-description">This table acts as the system's E-Class Record, tracking the specific academic progress of students. By archiving a detailed breakdown of written works, performance outputs, and exam results, it provides the necessary data points for the system to compute final quarterly grades automatically.</p>
+
+        <h3>Table 11: Attendances Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the attendance record</td></tr>
+            <tr><td>student_id</td><td>BIGINT(FK)</td><td>Reference to the Student</td></tr>
+            <tr><td>section_id</td><td>BIGINT(FK)</td><td>Reference to the Section</td></tr>
+            <tr><td>date</td><td>DATE</td><td>The specific date of the record</td></tr>
+            <tr><td>status</td><td>VARCHAR</td><td>Attendance status (e.g., Present, Absent)</td></tr>
+        </table>
+        <p class="table-description">Tracks the daily or weekly attendance of students within their assigned sections to maintain compliance and help identify chronic absenteeism early.</p>
+
+        <h3>Table 12: Activity Logs Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the log entry</td></tr>
+            <tr><td>user_id</td><td>BIGINT(FK)</td><td>Reference to the User who performed the action</td></tr>
+            <tr><td>action</td><td>VARCHAR</td><td>The specific action performed</td></tr>
+            <tr><td>description</td><td>TEXT</td><td>Detailed description of the event</td></tr>
+            <tr><td>created_at</td><td>TIMESTAMP</td><td>Exact date and time of the action</td></tr>
+        </table>
+        <p class="table-description">Provides a comprehensive audit trail of all system actions. It allows administrators to securely monitor user activity, track modifications, and maintain high accountability across the platform.</p>
+
+        <h3>Table 13: AI Predictions Table</h3>
+        <table>
+            <tr><th>Field Name</th><th>Data Type</th><th>Description</th></tr>
+            <tr><td>id</td><td>BIGINT(PK)</td><td>Unique identifier for the prediction record</td></tr>
+            <tr><td>student_id</td><td>BIGINT(FK)</td><td>Reference to the Student evaluated</td></tr>
+            <tr><td>risk_level</td><td>VARCHAR</td><td>Categorized risk level (e.g., High, Low)</td></tr>
+            <tr><td>factors</td><td>TEXT</td><td>Key variables that triggered the prediction</td></tr>
+            <tr><td>recommendation</td><td>TEXT</td><td>Suggested academic intervention</td></tr>
+            <tr><td>generated_at</td><td>TIMESTAMP</td><td>Date and time the prediction was generated</td></tr>
+        </table>
+        <p class="table-description">Stores the output and insights generated from the Random Forest machine learning model. It identifies at-risk students and provides actionable transparency (such as risk factors and recommendations) for targeted academic interventions.</p>
+    </div>
+
+    <script>
+        function copyToClipboard() {
+            var range = document.createRange();
+            var content = document.getElementById("dictionary-content");
+            range.selectNode(content);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            
+            try {
+                document.execCommand('copy');
+                alert('Data Dictionary has been copied! You can now Paste (Ctrl+V) it into your Microsoft Word manuscript.');
+            } catch(err) {
+                alert('Unable to copy automatically. Please select the text manually (Ctrl+A) and copy (Ctrl+C).');
+            }
+            window.getSelection().removeAllRanges();
+        }
+    </script>
+</body>
+</html>

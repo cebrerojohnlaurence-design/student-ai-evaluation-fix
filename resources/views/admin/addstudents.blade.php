@@ -1,3 +1,2 @@
 {{-- resources/views/admin/addstudents.blade.php --}}
-@extends('dash.main')
-
+@extends ('dash.main')

@@ -112,7 +112,12 @@ async function initStudentDashboard() {
 function calculateQuarterAverages() {
     if (!window.studentData || !window.studentData.subjects) return;
     
-    for (let q = 1; q <= 4; q++) {
+    // Quick SHS check
+    const secName = (window.studentData.section || '').toLowerCase();
+    const isSHS = secName.includes('11') || secName.includes('12') || window.studentsAnalyticsLevel === 'SH';
+    const maxQ = isSHS ? 3 : 4;
+
+    for (let q = 1; q <= maxQ; q++) {
         const qSubjects = window.studentData.subjects.filter(s => parseInt(s.quarter) === q && s.g);
         const avgEl = document.getElementById(`q${q}-avg`);
         
@@ -127,35 +132,7 @@ function calculateQuarterAverages() {
 }
 
 function setActiveQuarter(q) {
-    window.activeQuarter = q;
-    
-    // Update Card UI
-    document.querySelectorAll('.q-card').forEach(card => {
-        card.classList.remove('border-primary', 'bg-primary/5', 'shadow-md');
-        card.classList.add('border-transparent', 'bg-white', 'shadow-sm');
-        card.querySelector('.q-card-icon').classList.remove('bg-primary', 'text-white');
-        card.querySelector('.q-card-icon').classList.add('bg-gray-50', 'text-gray-400');
-        card.querySelector('.q-card-active-indicator').classList.add('hidden');
-        card.querySelector('.q-avg-container').classList.remove('bg-primary/10', 'text-primary');
-        card.querySelector('.q-avg-container').classList.add('bg-gray-50', 'text-gray-400');
-    });
-
-    const activeCard = document.getElementById(`q-card-${q}`);
-    if (activeCard) {
-        activeCard.classList.remove('border-transparent', 'bg-white', 'shadow-sm');
-        activeCard.classList.add('border-primary', 'bg-primary/5', 'shadow-md');
-        activeCard.querySelector('.q-card-icon').classList.remove('bg-gray-50', 'text-gray-400');
-        activeCard.querySelector('.q-card-icon').classList.add('bg-primary', 'text-white');
-        activeCard.querySelector('.q-card-active-indicator').classList.remove('hidden');
-        activeCard.querySelector('.q-avg-container').classList.remove('bg-gray-50', 'text-gray-400');
-        activeCard.querySelector('.q-avg-container').classList.add('bg-primary/10', 'text-primary');
-    }
-
-    // Update Table Label
-    const labels = {1: '1ST QUARTER', 2: '2ND QUARTER', 3: '3RD QUARTER', 4: '4TH QUARTER'};
-    document.getElementById('active-quarter-label').innerText = labels[q] || 'SUBJECT GRADES';
-
-    renderEnrolledGrades();
+    // Deprecated for Matrix view, left empty to prevent console errors if called
 }
 
 async function renderEnrolledGrades() {
@@ -181,65 +158,156 @@ async function renderEnrolledGrades() {
 
     const syTarget = currentEnrollment ? currentEnrollment.school_year : null;
     
+    document.getElementById('active-quarter-label').innerText = 'ANNUAL GRADE MATRIX';
+    
     // Filter subjects by the selected school year
     let subjects = window.studentData.subjects.filter(s => !syTarget || s.school_year === syTarget);
     
-    // Filter by Selected Quarter (from Card)
-    const selectedQuarter = window.activeQuarter || 'all';
+    // Group by Subject Name for the Matrix
+    let groupedSubjects = {};
     
-    if (selectedQuarter !== 'all') {
-        subjects = subjects.filter(s => s.quarter == selectedQuarter);
+    // Determine standard subjects by grade level (JHS 7-10)
+    let stdSubjects = [];
+    let sectionName = (currentEnrollment ? currentEnrollment.section : window.studentData.section) || '';
+    let secLower = sectionName.toLowerCase();
+    let gradeLevel = null;
+    
+    if (secLower.match(/\b12\b/) || secLower.startsWith('12')) gradeLevel = 12;
+    else if (secLower.match(/\b11\b/) || secLower.startsWith('11')) gradeLevel = 11;
+    else if (secLower.match(/\b10\b/) || secLower.startsWith('10')) gradeLevel = 10;
+    else if (secLower.match(/\b9\b/) || secLower.startsWith('9')) gradeLevel = 9;
+    else if (secLower.match(/\b8\b/) || secLower.startsWith('8')) gradeLevel = 8;
+    else if (secLower.match(/\b7\b/) || secLower.startsWith('7')) gradeLevel = 7;
+    
+    const isSHS = gradeLevel === 11 || gradeLevel === 12 || window.studentsAnalyticsLevel === 'SH';
+    const maxTerms = isSHS ? 3 : 4;
+
+    // Auto-inject standard curriculum subjects for JHS
+    if ((gradeLevel >= 7 && gradeLevel <= 10) || (!isSHS)) {
+        stdSubjects = ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'MAPEH', 'ESP', 'TLE'];
     }
+    
+    stdSubjects.forEach(sub => {
+        groupedSubjects[sub] = { 
+            name: sub, 
+            school_year: syTarget || window.currentRecordSchoolYear || '2025-2026', 
+            q1: null, q2: null, q3: null, q4: null 
+        };
+    });
+
+    subjects.forEach(s => {
+        if (!groupedSubjects[s.n]) {
+            groupedSubjects[s.n] = { name: s.n, school_year: s.school_year, q1: null, q2: null, q3: null, q4: null };
+        }
+        if (s.g && s.quarter) {
+            groupedSubjects[s.n]['q' + parseInt(s.quarter)] = parseFloat(s.g);
+        }
+    });
+
+    const matrixData = Object.values(groupedSubjects);
     
     // Render Grades Table
     const tbody = document.getElementById('grades-table-body');
+    const tfoot = document.getElementById('grades-table-foot');
     tbody.innerHTML = '';
 
-    if (subjects.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-sm font-bold text-gray-400"><i class="fas fa-folder-open mb-2 text-2xl text-gray-300 block"></i>No grades encoded for this school year yet.</td></tr>`;
+    if (matrixData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-sm font-bold text-gray-400"><i class="fas fa-folder-open mb-2 text-2xl text-gray-300 block"></i>No grades encoded for this school year yet.</td></tr>`;
+        tfoot.classList.add('hidden');
     } else {
-        subjects.forEach(sub => {
+        let totalFinalGrades = 0;
+        let countFinalGrades = 0;
+        
+        matrixData.forEach(sub => {
             const tr = document.createElement('tr');
             tr.className = 'group hover:bg-gray-50/50 transition-colors border-b border-gray-50 last:border-0';
             
-            let gradeHtml = '--';
-            if (sub.g) {
-                const gradeVal = parseFloat(sub.g);
-                if (gradeVal >= 90) gradeHtml = `<div class="inline-flex flex-col items-center"><span class="bg-primary/10 text-primary font-black px-3 py-1 rounded-lg text-sm border border-primary/20">${gradeVal}</span></div>`;
-                else if (gradeVal >= 75) gradeHtml = `<div class="inline-flex flex-col items-center"><span class="bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-lg text-sm border border-blue-100">${gradeVal}</span></div>`;
-                else gradeHtml = `<div class="inline-flex flex-col items-center"><span class="bg-red-50 text-red-600 font-bold px-3 py-1 rounded-lg text-sm border border-red-100">${gradeVal}</span></div>`;
+            let q1Html = sub.q1 ? sub.q1 : '<span class="text-gray-300">--</span>';
+            let q2Html = sub.q2 ? sub.q2 : '<span class="text-gray-300">--</span>';
+            let q3Html = sub.q3 ? sub.q3 : '<span class="text-gray-300">--</span>';
+            let q4Html = sub.q4 ? sub.q4 : '<span class="text-gray-300">--</span>';
+            
+            let finalAvg = 0;
+            let qCount = 0;
+            if(sub.q1) { finalAvg += sub.q1; qCount++; }
+            if(sub.q2) { finalAvg += sub.q2; qCount++; }
+            if(sub.q3) { finalAvg += sub.q3; qCount++; }
+            if(!isSHS && sub.q4) { finalAvg += sub.q4; qCount++; }
+            
+            let finalGradeHtml = '--';
+            let remarksHtml = '--';
+            
+            if (qCount > 0) {
+                const calculatedFinal = finalAvg / qCount;
+                totalFinalGrades += calculatedFinal;
+                countFinalGrades++;
+                
+                finalGradeHtml = `<span class="bg-gray-100 px-3 py-1 text-gray-700 font-black rounded-lg border border-gray-200">${calculatedFinal.toFixed(0)}</span>`;
+                
+                if (calculatedFinal >= 75) {
+                    remarksHtml = `<span class="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">PASSED</span>`;
+                } else {
+                    remarksHtml = `<span class="text-red-500 font-bold text-xs bg-red-50 px-2 py-1 rounded">FAILED</span>`;
+                }
             }
 
-            let wwAvg = '--', ptAvg = '--', qaAvg = '--';
-            let wwSum = 0, wwCount = 0;
-            for (let i=1; i<=10; i++) { if (sub['ww'+i]) { wwSum += parseFloat(sub['ww'+i]); wwCount++; } }
-            if (wwCount > 0) wwAvg = wwSum.toFixed(1);
-
-            let ptSum = 0, ptCount = 0;
-            for (let i=1; i<=10; i++) { if (sub['pt'+i]) { ptSum += parseFloat(sub['pt'+i]); ptCount++; } }
-            if (ptCount > 0) ptAvg = ptSum.toFixed(1);
-
-            if (sub['qa']) qaAvg = parseFloat(sub['qa']).toFixed(1);
-
             tr.innerHTML = `
-                <td class="py-5 px-8">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-primary/5 group-hover:text-primary transition-all">
-                            <i class="fas fa-book text-sm"></i>
+                <td class="py-4 px-6 border-r border-gray-50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-primary/5 group-hover:text-primary transition-all">
+                            <i class="fas fa-book text-[10px]"></i>
                         </div>
                         <div>
-                            <p class="text-sm font-black text-gray-800 tracking-tight">${sub.n}</p>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">SY ${sub.school_year}</p>
+                            <p class="text-xs font-black text-gray-800 tracking-tight">${sub.name}</p>
+                            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">SY ${sub.school_year}</p>
                         </div>
                     </div>
                 </td>
-                <td class="py-5 px-6 text-center text-sm font-bold text-gray-600">${wwAvg}</td>
-                <td class="py-5 px-6 text-center text-sm font-bold text-gray-600">${ptAvg}</td>
-                <td class="py-5 px-6 text-center text-sm font-bold text-gray-600">${qaAvg}</td>
-                <td class="py-5 px-8 text-center">${gradeHtml}</td>
+                <td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-bold text-gray-600">${q1Html}</td>
+                <td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-bold text-gray-600">${q2Html}</td>
+                <td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-bold text-gray-600">${q3Html}</td>
+                ${!isSHS ? `<td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-bold text-gray-600">${q4Html}</td>` : ''}
+                <td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-black text-gray-800 bg-gray-50/50">${finalGradeHtml}</td>
+                <td class="py-4 px-4 text-center">${remarksHtml}</td>
             `;
             tbody.appendChild(tr);
         });
+
+        // Set table headers dynamically based on isSHS
+        const theadHtml = `
+            <tr>
+                <th class="py-4 px-6 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50">Learning Area</th>
+                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">${isSHS ? 'Term 1' : 'Q1'}</th>
+                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">${isSHS ? 'Term 2' : 'Q2'}</th>
+                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">${isSHS ? 'Term 3' : 'Q3'}</th>
+                ${!isSHS ? `<th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">Q4</th>` : ''}
+                <th class="py-4 px-4 text-center text-[10px] font-black text-primary uppercase tracking-widest border-r border-gray-50 w-24 bg-primary/5">Final</th>
+                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest w-24">Remarks</th>
+            </tr>
+        `;
+        const headEl = document.getElementById('grades-table-head');
+        if (headEl) headEl.innerHTML = theadHtml;
+
+        const subtitle = document.getElementById('grades-subtitle');
+        if (subtitle) subtitle.innerText = isSHS ? 'Term Grade Breakdown' : 'Quarterly Grade Breakdown';
+
+        tfoot.classList.remove('hidden');
+        
+        // Show Footer GWA
+        if (countFinalGrades > 0) {
+            const matrixGwa = totalFinalGrades / countFinalGrades;
+            document.getElementById('matrix-gwa-val').innerText = matrixGwa.toFixed(2);
+            
+            const remarksEl = document.getElementById('matrix-gwa-remarks');
+            if (matrixGwa >= 75) {
+                remarksEl.innerHTML = `<span class="text-green-600 font-bold text-sm bg-green-50 px-3 py-1.5 rounded-full border border-green-100">PASSED</span>`;
+            } else {
+                remarksEl.innerHTML = `<span class="text-red-600 font-bold text-sm bg-red-50 px-3 py-1.5 rounded-full border border-red-100">FAILED</span>`;
+            }
+            tfoot.classList.remove('hidden');
+        } else {
+            tfoot.classList.add('hidden');
+        }
     }
 
     // Overview Stats relative to selected year
@@ -257,12 +325,24 @@ async function renderEnrolledGrades() {
     
     if (gwaVal > 0) {
         document.getElementById('student-gwa').innerText = gwaVal.toFixed(2);
-        
+        let isSH = false;
+        if (currentUser && currentUser.section) {
+            const match = currentUser.section.match(/Grade (\d+)/i);
+            if (match && parseInt(match[1]) >= 11) isSH = true;
+        }
+
+        const hasFailing = subjects.some(s => s.g && parseFloat(s.g) < 75);
+
         // Honors Logic
-        if (gwaVal >= 98) { gwaBadge.innerText = "With Highest Honors"; gwaBadge.classList.remove('hidden'); }
-        else if (gwaVal >= 95) { gwaBadge.innerText = "With High Honors"; gwaBadge.classList.remove('hidden'); }
-        else if (gwaVal >= 90) { gwaBadge.innerText = "With Honors"; gwaBadge.classList.remove('hidden'); }
-        else { gwaBadge.classList.add('hidden'); }
+        if (isSH) {
+            if (gwaVal >= 90 && !hasFailing) { gwaBadge.innerText = "Academic Excellence Award"; gwaBadge.classList.remove('hidden'); }
+            else { gwaBadge.classList.add('hidden'); }
+        } else {
+            if (gwaVal >= 98 && !hasFailing) { gwaBadge.innerText = "With Highest Honors"; gwaBadge.classList.remove('hidden'); }
+            else if (gwaVal >= 95 && !hasFailing) { gwaBadge.innerText = "With High Honors"; gwaBadge.classList.remove('hidden'); }
+            else if (gwaVal >= 90 && !hasFailing) { gwaBadge.innerText = "With Honors"; gwaBadge.classList.remove('hidden'); }
+            else { gwaBadge.classList.add('hidden'); }
+        }
     } else {
         document.getElementById('student-gwa').innerText = '--';
         gwaBadge.classList.add('hidden');

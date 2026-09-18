@@ -87,13 +87,56 @@ function renderAssignSection(container) {
     const filteredSections = _sections.filter(sec => {
         const gradeNum = parseInt((sec.year || '').replace(/\D/g, '')) || 0;
         let matchesFilter = true;
-        if (_sectionFilter === 'JH') matchesFilter = gradeNum <= 10;
-        if (_sectionFilter === 'SH') matchesFilter = gradeNum >= 11;
+        
+        if (currentUser.role === 'curriculum_coordinator') {
+            if (currentUser.department === 'JHS') matchesFilter = gradeNum <= 10;
+            else if (currentUser.department === 'SHS') matchesFilter = gradeNum >= 11;
+        } else {
+            if (_sectionFilter === 'JH') matchesFilter = gradeNum <= 10;
+            if (_sectionFilter === 'SH') matchesFilter = gradeNum >= 11;
+        }
 
         const matchesYear = !sec.schoolYear || sec.schoolYear === _schoolYearFilter;
         const matchesSearch = _sectionSearch === '' || (sec.name || '').toLowerCase().includes(_sectionSearch);
         return matchesFilter && matchesYear && matchesSearch;
     });
+
+    let filterTabsHtml = '<div class="flex bg-white rounded-xl shadow-sm border border-gray-100 p-1 shrink-0">';
+    if (currentUser.role !== 'curriculum_coordinator') {
+        filterTabsHtml += '<button onclick="setSectionFilter(\'ALL\')" class="flex-1 py-2.5 text-xs tracking-wider font-bold rounded-lg transition ' + (_sectionFilter === 'ALL' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:text-gray-700 bg-transparent') + '">All Sections</button>' +
+        '<button onclick="setSectionFilter(\'JH\')" class="flex-1 py-2.5 text-xs tracking-wider font-bold rounded-lg transition ' + (_sectionFilter === 'JH' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:text-gray-700 bg-transparent') + '">JHS (' + jhCount + ')</button>' +
+        '<button onclick="setSectionFilter(\'SH\')" class="flex-1 py-2.5 text-xs tracking-wider font-bold rounded-lg transition ' + (_sectionFilter === 'SH' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:text-gray-700 bg-transparent') + '">SHS (' + shCount + ')</button>';
+    } else if (currentUser.department === 'JHS') {
+        filterTabsHtml += '<button class="flex-1 py-2.5 text-xs tracking-wider font-bold rounded-lg transition bg-primary text-white shadow-md">JHS (' + jhCount + ')</button>';
+    } else if (currentUser.department === 'SHS') {
+        filterTabsHtml += '<button class="flex-1 py-2.5 text-xs tracking-wider font-bold rounded-lg transition bg-primary text-white shadow-md">SHS (' + shCount + ')</button>';
+    }
+    filterTabsHtml += '</div>';
+
+    let sysArray = ['2024-2025', '2025-2026', '2026-2027', '2027-2028'];
+    if (typeof globalSettings !== 'undefined' && globalSettings.school_years) {
+        try {
+            let parsed = JSON.parse(globalSettings.school_years);
+            if (Array.isArray(parsed) && parsed.length > 0) sysArray = parsed;
+        } catch(e){}
+    }
+
+    let defaultYears = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+    if (typeof globalSettings !== 'undefined' && globalSettings.system_lists) {
+        try {
+            let parsed = JSON.parse(globalSettings.system_lists);
+            if (parsed.grade_levels && Array.isArray(parsed.grade_levels) && parsed.grade_levels.length > 0) defaultYears = parsed.grade_levels;
+        } catch(e){}
+    }
+
+    let yearOptions = [...defaultYears];
+    let strandOptionsHtml = SH_STRANDS.map(s => '<option value="' + s + '">' + s + '</option>').join('');
+
+    if (currentUser.role === 'curriculum_coordinator') {
+        if (currentUser.department === 'SHS' && currentUser.strand) {
+            strandOptionsHtml = '<option value="' + currentUser.strand + '" selected>' + currentUser.strand + ' Track</option>';
+        }
+    }
 
     const sectionListHtml = filteredSections.length === 0
         ? '<div class="py-10 text-center text-gray-400 text-sm italic">No sections found.</div>'
@@ -144,7 +187,7 @@ function renderAssignSection(container) {
         '<div class="flex flex-col items-end">' +
         '<label class="text-[9px] font-bold text-gray-400 uppercase mb-1">School Year</label>' +
         '<select onchange="setSchoolYearFilter(this.value)" class="px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold shadow-sm focus:border-primary outline-none cursor-pointer">' +
-        ['2024-2025', '2025-2026', '2026-2027', '2027-2028'].map(sy => `<option value="${sy}" ${_schoolYearFilter === sy ? 'selected' : ''}>S.Y. ${sy}</option>`).join('') +
+        sysArray.map(sy => `<option value="${sy}" ${_schoolYearFilter === sy ? 'selected' : ''}>S.Y. ${sy}</option>`).join('') +
         '</select>' +
         '</div>' +
         '</div>' +
@@ -153,11 +196,7 @@ function renderAssignSection(container) {
         '<!-- Section list -->' +
         '<div class="lg:col-span-5 flex flex-col gap-4 max-h-[80vh] min-h-[500px] animate-slide-up">' +
         // Filter Tabs
-        '<div class="flex bg-white rounded-xl shadow-sm border border-gray-100 p-1 shrink-0">' +
-        '<button onclick="setSectionFilter(\'ALL\')" class="flex-1 py-2.5 text-xs tracking-wider font-bold rounded-lg transition ' + (_sectionFilter === 'ALL' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:text-gray-700 bg-transparent') + '">All Sections</button>' +
-        '<button onclick="setSectionFilter(\'JH\')" class="flex-1 py-2.5 text-xs tracking-wider font-bold rounded-lg transition ' + (_sectionFilter === 'JH' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:text-gray-700 bg-transparent') + '">JHS (' + jhCount + ')</button>' +
-        '<button onclick="setSectionFilter(\'SH\')" class="flex-1 py-2.5 text-xs tracking-wider font-bold rounded-lg transition ' + (_sectionFilter === 'SH' ? 'bg-primary text-white shadow-md' : 'text-gray-400 hover:text-gray-700 bg-transparent') + '">SHS (' + shCount + ')</button>' +
-        '</div>' +
+        filterTabsHtml +
         // Search Box
         '<div class="relative shrink-0">' +
         '<i class="fas fa-search absolute left-4 top-3.5 text-gray-300 text-sm"></i>' +
@@ -175,6 +214,7 @@ function renderAssignSection(container) {
         '</div>' +
         '</div>' +
 
+        
         '<!-- Add Section Modal -->' +
         '<div id="add-section-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">' +
         '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 animate-scale-up">' +
@@ -188,13 +228,13 @@ function renderAssignSection(container) {
         '<label class="text-xs font-bold text-gray-500 uppercase block mb-1.5">Year Level</label>' +
         '<select id="new-sec-year" onchange="toggleSectionStrandField()" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-primary bg-white">' +
         '<option value="" disabled selected>-- Select Year Level --</option>' +
-        ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map(y => '<option value="' + y + '">' + y + '</option>').join('') +
+        yearOptions.map(y => '<option value="' + y + '">' + y + '</option>').join('') +
         '</select>' +
         '</div>' +
         '<div id="new-sec-strand-wrap" class="hidden">' +
         '<label class="text-xs font-bold text-gray-500 uppercase block mb-1.5">Strand / Track</label>' +
         '<select id="new-sec-strand" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-primary bg-white">' +
-        SH_STRANDS.map(s => '<option value="' + s + '">' + s + '</option>').join('') +
+        strandOptionsHtml +
         '</select>' +
         '</div>' +
         '</div>' +
@@ -232,6 +272,17 @@ function renderAssignSection(container) {
         '</button>' +
         '<div id="assign-scan-results" class="hidden mt-4"></div>' +
         '</div>' +
+        '</div>' +
+        '<!-- Confirmation Modal -->' +
+        '<div id="custom-confirm-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">' +
+        '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 animate-scale-up">' +
+        '<h3 id="confirm-modal-title" class="text-lg font-bold text-gray-800 mb-2">Confirm Action</h3>' +
+        '<p id="confirm-modal-msg" class="text-sm text-gray-500 mb-6"></p>' +
+        '<div class="flex gap-3">' +
+        '<button id="confirm-modal-yes" onclick="if(window._confirmCallback) window._confirmCallback(); closeConfirmModal();" class="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition shadow-sm">Confirm</button>' +
+        '<button onclick="closeConfirmModal()" class="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Cancel</button>' +
+        '</div>' +
+        '</div>' +
         '</div>';
 }
 
@@ -245,14 +296,22 @@ function _buildEnrolledSearchResults(sec, searchStr) {
         return '<p class="text-center text-gray-400 italic text-sm py-6">No enrolled students found.</p>';
     }
 
-    return '<div class="divide-y divide-gray-50">' +
+    let selectAllHtml = '<div class="flex items-center gap-3 px-2 py-1.5 mb-1 bg-gray-50 rounded-lg">' +
+        '<input type="checkbox" id="cb-select-all" onclick="toggleSelectAllStudents(this)" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary cursor-pointer">' +
+        '<label for="cb-select-all" class="text-[10px] font-bold text-gray-500 uppercase cursor-pointer">Select All</label>' +
+        '</div>';
+
+    return selectAllHtml + '<div class="divide-y divide-gray-50">' +
         enrolled.map(s =>
-            '<div class="flex items-center justify-between py-2.5 px-1 hover:bg-gray-50 rounded-xl transition">' +
+            '<div class="flex items-center justify-between py-2.5 px-1 hover:bg-gray-50 rounded-xl transition group">' +
+            '<div class="flex items-center gap-3">' +
+            '<input type="checkbox" value="' + s.lrn + '" class="student-select-cb w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary ml-1 cursor-pointer" onchange="toggleRemoveSelectedBtn()">' +
             '<div>' +
             '<p class="text-sm font-bold text-gray-800">' + s.name + '</p>' +
             '<p class="text-[10px] font-mono text-gray-400">LRN: ' + s.lrn + '</p>' +
             '</div>' +
-            '<button onclick="removeStudentFromSection(\'' + s.lrn + '\')" class="px-3 py-1 bg-red-50 text-red-500 rounded-lg text-[10px] font-bold hover:bg-red-100 transition">' +
+            '</div>' +
+            '<button onclick="removeStudentFromSection(\'' + s.lrn + '\')" class="px-3 py-1 bg-red-50 text-red-500 rounded-lg text-[10px] font-bold hover:bg-red-100 transition opacity-0 group-hover:opacity-100">' +
             '<i class="fas fa-user-minus mr-1"></i>Remove' +
             '</button>' +
             '</div>'
@@ -306,7 +365,11 @@ function _buildSectionDetailPanel(sec) {
         '<!-- Enrolled students -->' +
         '<div class="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col">' +
         '<div class="flex items-center justify-between mb-3">' +
+        '<div class="flex items-center gap-3">' +
         '<label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Currently Enrolled (' + enrolledTotalOptions + ')</label>' +
+        (enrolledTotalOptions > 0 ? '<button id="btn-remove-selected" onclick="removeSelectedStudents()" class="hidden text-[10px] font-bold text-orange-500 hover:text-orange-700 hover:underline transition uppercase tracking-wider">Remove Selected (<span id="selected-count">0</span>)</button>' : '') +
+        (enrolledTotalOptions > 0 ? '<button onclick="removeAllStudentsFromSection()" class="text-[10px] font-bold text-red-500 hover:text-red-700 hover:underline transition uppercase tracking-wider">Remove All</button>' : '') +
+        '</div>' +
         '<div class="relative w-48">' +
         '<i class="fas fa-search absolute left-3 top-2.5 text-gray-300 text-[10px]"></i>' +
         '<input type="text" id="enrolled-search-input" value="' + (_enrolledStudentSearch || '') + '" oninput="searchEnrolledStudents(this.value)" placeholder="Search enrolled..." class="w-full pl-8 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 bg-gray-50 focus:bg-white transition">' +
@@ -415,13 +478,15 @@ function saveNewSection() {
 
 function deleteSection(id) {
     const sec = _sections.find(s => s.id === id);
-    if (!sec || !confirm('Delete section "' + sec.name + '"? Students will be unassigned.')) return;
-    _sections = _sections.filter(s => s.id !== id);
-    _saveSections();
-    if (_selectedSection && _selectedSection.id === id) _selectedSection = null;
-    logActivity('Admin deleted section: ' + sec.name);
-    showMessage('Section removed.');
-    renderAssignSection(document.getElementById('content-area'));
+    if (!sec) return;
+    openConfirmModal('Delete Section', 'Delete section "' + sec.name + '"? Students will be unassigned.', () => {
+        _sections = _sections.filter(s => s.id !== id);
+        _saveSections();
+        if (_selectedSection && _selectedSection.id === id) _selectedSection = null;
+        logActivity('Admin deleted section: ' + sec.name);
+        showMessage('Section removed.');
+        renderAssignSection(document.getElementById('content-area'));
+    });
 }
 
 function selectSection(id) {
@@ -500,22 +565,24 @@ async function assignStudentToSection(lrn) {
 
 async function removeStudentFromSection(lrn) {
     const student = students.find(s => s.lrn === lrn);
-    if (!student || !confirm('Remove ' + student.name + ' from this section?')) return;
+    if (!student) return;
 
-    try {
-        const res = await fetch('/api/students/' + (student.id || lrn), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ section: null, school_year: _schoolYearFilter })
-        });
-        if (!res.ok) { showMessage('Failed to remove student.', true); return; }
-        student.section = null;
-        logActivity('Removed ' + student.name + ' from section ' + _selectedSection.name);
-        showMessage(student.name + ' removed from section.');
-        renderAssignSection(document.getElementById('content-area'));
-    } catch {
-        showMessage('Network error.', true);
-    }
+    openConfirmModal('Remove Student', 'Remove ' + student.name + ' from this section?', async () => {
+        try {
+            const res = await fetch('/api/students/' + (student.id || lrn), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ section: null, school_year: _schoolYearFilter })
+            });
+            if (!res.ok) { showMessage('Failed to remove student.', true); return; }
+            student.section = null;
+            logActivity('Removed ' + student.name + ' from section ' + _selectedSection.name);
+            showMessage(student.name + ' removed from section.');
+            renderAssignSection(document.getElementById('content-area'));
+        } catch {
+            showMessage('Network error.', true);
+        }
+    });
 }
 
 let _assignScanBase64 = null;
@@ -728,4 +795,111 @@ async function confirmAssignScan() {
     closeAssignScanModal();
     _assignStudentSearch = '';
     renderAssignSection(document.getElementById('content-area'));
+}
+
+function removeAllStudentsFromSection() {
+    if (!_selectedSection) return;
+    const enrolled = students.filter(s => s.section === _selectedSection.name);
+    if (enrolled.length === 0) return;
+    openConfirmModal('Remove All Students', 'Are you sure you want to remove all ' + enrolled.length + ' students from ' + _selectedSection.name + '?', async () => {
+        const resultsDiv = document.getElementById('enrolled-search-results');
+        if (resultsDiv) resultsDiv.innerHTML = '<div class="flex flex-col items-center justify-center p-6 gap-3"><div class="spinner border-primary"></div><p class="text-sm font-bold text-primary">Removing Students...</p></div>';
+        
+        let successCount = 0;
+        const promises = enrolled.map(async (s) => {
+            try {
+                const res = await fetch('/api/students/' + (s.id || s.lrn), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ section: null, school_year: _schoolYearFilter })
+                });
+                if (res.ok) {
+                    s.section = null;
+                    successCount++;
+                }
+            } catch (e) {}
+        });
+        
+        await Promise.all(promises);
+        logActivity('Admin removed all students from section: ' + _selectedSection.name);
+        showMessage('Successfully removed ' + successCount + ' students.');
+        renderAssignSection(document.getElementById('content-area'));
+    });
+}
+
+function openConfirmModal(title, msg, onConfirm) {
+    const titleEl = document.getElementById('confirm-modal-title');
+    const msgEl = document.getElementById('confirm-modal-msg');
+    const modalEl = document.getElementById('custom-confirm-modal');
+    if(titleEl) titleEl.innerText = title;
+    if(msgEl) msgEl.innerText = msg;
+    window._confirmCallback = onConfirm;
+    if(modalEl) modalEl.classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+    const modalEl = document.getElementById('custom-confirm-modal');
+    if(modalEl) modalEl.classList.add('hidden');
+    window._confirmCallback = null;
+}
+
+function toggleSelectAllStudents(source) {
+    const checkboxes = document.querySelectorAll('.student-select-cb');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    toggleRemoveSelectedBtn();
+}
+
+function toggleRemoveSelectedBtn() {
+    const checkboxes = document.querySelectorAll('.student-select-cb:checked');
+    const btn = document.getElementById('btn-remove-selected');
+    const countSpan = document.getElementById('selected-count');
+    if (btn && countSpan) {
+        if (checkboxes.length > 0) {
+            btn.classList.remove('hidden');
+            countSpan.innerText = checkboxes.length;
+        } else {
+            btn.classList.add('hidden');
+        }
+    }
+    
+    const selectAllCb = document.getElementById('cb-select-all');
+    if (selectAllCb) {
+        const allCheckboxes = document.querySelectorAll('.student-select-cb');
+        selectAllCb.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkboxes.length;
+    }
+}
+
+function removeSelectedStudents() {
+    if (!_selectedSection) return;
+    const checkboxes = document.querySelectorAll('.student-select-cb:checked');
+    if (checkboxes.length === 0) return;
+    
+    const lrns = Array.from(checkboxes).map(cb => cb.value);
+    
+    openConfirmModal('Remove Selected', 'Are you sure you want to remove ' + lrns.length + ' selected student(s) from ' + _selectedSection.name + '?', async () => {
+        const resultsDiv = document.getElementById('enrolled-search-results');
+        if (resultsDiv) resultsDiv.innerHTML = '<div class="flex flex-col items-center justify-center p-6 gap-3"><div class="spinner border-primary"></div><p class="text-sm font-bold text-primary">Removing Students...</p></div>';
+        
+        let successCount = 0;
+        const promises = lrns.map(async (lrn) => {
+            const s = students.find(st => st.lrn === lrn);
+            if (!s) return;
+            try {
+                const res = await fetch('/api/students/' + (s.id || s.lrn), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ section: null, school_year: _schoolYearFilter })
+                });
+                if (res.ok) {
+                    s.section = null;
+                    successCount++;
+                }
+            } catch (e) {}
+        });
+        
+        await Promise.all(promises);
+        logActivity('Admin removed ' + successCount + ' students from section: ' + _selectedSection.name);
+        showMessage('Successfully removed ' + successCount + ' students.');
+        renderAssignSection(document.getElementById('content-area'));
+    });
 }

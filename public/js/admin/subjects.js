@@ -8,12 +8,32 @@
 // ─── State ────────────────────────────────────────────────────────────────────
 var subPageLevel = 'JH';
 var subPageJHGrade = 7;
-var subPageStrand = 'ABM';
+var subPageStrand = 'Academic';
 var subPageGrade = 11;
 var subPageSem = 1;
 
 // ─── ENTRY POINT ─────────────────────────────────────────────────────────────
 function renderSubjects(container) {
+    let tabsHtml = '';
+    if (currentUser.role === 'curriculum_coordinator') {
+        if (currentUser.department === 'JHS') {
+            tabsHtml = '<div class="flex gap-2 bg-gray-100 rounded-2xl p-1.5 w-fit">' +
+                '<button id="tab-btn-JH" class="px-6 py-2 rounded-xl text-sm font-bold transition bg-white text-primary shadow-sm cursor-default">Junior High</button>' +
+                '</div>';
+            subPageLevel = 'JH';
+        } else if (currentUser.department === 'SHS') {
+            tabsHtml = '<div class="flex gap-2 bg-gray-100 rounded-2xl p-1.5 w-fit">' +
+                '<button id="tab-btn-SH" class="px-6 py-2 rounded-xl text-sm font-bold transition bg-white text-primary shadow-sm cursor-default">Senior High</button>' +
+                '</div>';
+            subPageLevel = 'SH';
+        }
+    } else {
+        tabsHtml = '<div class="flex gap-2 bg-gray-100 rounded-2xl p-1.5 w-fit">' +
+            '<button id="tab-btn-JH" onclick="setSubjectLevel(\'JH\')" class="' + (subPageLevel === 'JH' ? 'px-6 py-2 rounded-xl text-sm font-bold transition bg-white text-primary shadow-sm' : 'px-6 py-2 rounded-xl text-sm font-bold transition text-gray-500 hover:text-primary') + '">Junior High</button>' +
+            '<button id="tab-btn-SH" onclick="setSubjectLevel(\'SH\')" class="' + (subPageLevel === 'SH' ? 'px-6 py-2 rounded-xl text-sm font-bold transition bg-white text-primary shadow-sm' : 'px-6 py-2 rounded-xl text-sm font-bold transition text-gray-500 hover:text-primary') + '">Senior High</button>' +
+            '</div>';
+    }
+
     container.innerHTML =
         '<div class="flex flex-col gap-6 animate-slide-up max-w-5xl mx-auto">' +
         '<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">' +
@@ -25,10 +45,7 @@ function renderSubjects(container) {
         '<i class="fas fa-camera"></i> AI Scan Subjects' +
         '</button>' +
         '</div>' +
-        '<div class="flex gap-2 bg-gray-100 rounded-2xl p-1.5 w-fit">' +
-        '<button id="tab-btn-JH" onclick="setSubjectLevel(\'JH\')" class="px-6 py-2 rounded-xl text-sm font-bold transition bg-white text-primary shadow-sm">Junior High</button>' +
-        '<button id="tab-btn-SH" onclick="setSubjectLevel(\'SH\')" class="px-6 py-2 rounded-xl text-sm font-bold transition text-gray-500 hover:text-primary">Senior High</button>' +
-        '</div>' +
+        tabsHtml +
         '<div id="subject-content-area"></div>' +
         '</div>' +
         '<div id="subject-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">' +
@@ -76,6 +93,14 @@ function renderSubjectContent() {
 function renderJHSubjects(area) {
     var gradeTabs = '';
     var grades = [7, 8, 9, 10];
+    if (typeof globalSettings !== 'undefined' && globalSettings.system_lists) {
+        try {
+            var parsed = JSON.parse(globalSettings.system_lists);
+            if (parsed.grade_levels) {
+                grades = parsed.grade_levels.map(g => parseInt(g.replace(/\D/g, ''))).filter(n => !isNaN(n));
+            }
+        } catch(e){}
+    }
     for (var gi = 0; gi < grades.length; gi++) {
         var g = grades[gi];
         gradeTabs +=
@@ -127,27 +152,40 @@ function setSubjectJHGrade(g) { subPageJHGrade = g; renderSubjectContent(); }
 
 // ─── SENIOR HIGH SUBJECTS ─────────────────────────────────────────────────────
 var strandColors = {
-    ABM: { bg: 'bg-blue-600', light: 'bg-blue-50', text: 'text-blue-700' },
-    STEM: { bg: 'bg-purple-600', light: 'bg-purple-50', text: 'text-purple-700' },
-    GAS: { bg: 'bg-amber-600', light: 'bg-amber-50', text: 'text-amber-700' },
-    TVL: { bg: 'bg-orange-600', light: 'bg-orange-50', text: 'text-orange-700' },
-    HUMSS: { bg: 'bg-pink-600', light: 'bg-pink-50', text: 'text-pink-700' }
+    Academic: { bg: 'bg-blue-600', light: 'bg-blue-50', text: 'text-blue-700' },
+    TechPro: { bg: 'bg-green-600', light: 'bg-green-50', text: 'text-green-700' }
 };
 
 function renderSHSubjects(area) {
     var strandTabs = '';
-    for (var si = 0; si < SH_STRANDS.length; si++) {
-        var st = SH_STRANDS[si];
+    if (currentUser.role === 'curriculum_coordinator' && currentUser.department === 'SHS' && currentUser.strand) {
+        // Only show the coordinator's specific strand
+        var st = currentUser.strand;
+        subPageStrand = st; // Force it
         var c = strandColors[st] || { bg: 'bg-gray-600', light: 'bg-gray-50', text: 'text-gray-700' };
-        var active = st === subPageStrand;
-        strandTabs +=
-            '<button onclick="setSubjectStrand(\'' + st + '\')" class="px-4 py-2 rounded-xl text-xs font-bold transition ' +
-            (active ? c.bg + ' text-white shadow-sm' : 'bg-white border border-gray-200 ' + c.text + ' hover:bg-gray-50') +
-            '">' + st + '</button>';
+        strandTabs += '<button class="px-4 py-2 rounded-xl text-xs font-bold transition ' + c.bg + ' text-white shadow-sm cursor-default">' + st + '</button>';
+    } else {
+        for (var si = 0; si < SH_STRANDS.length; si++) {
+            var st = SH_STRANDS[si];
+            var c = strandColors[st] || { bg: 'bg-gray-600', light: 'bg-gray-50', text: 'text-gray-700' };
+            var active = st === subPageStrand;
+            strandTabs +=
+                '<button onclick="setSubjectStrand(\'' + st + '\')" class="px-4 py-2 rounded-xl text-xs font-bold transition ' +
+                (active ? c.bg + ' text-white shadow-sm' : 'bg-white border border-gray-200 ' + c.text + ' hover:bg-gray-50') +
+                '">' + st + '</button>';
+        }
     }
 
     var gradeTabs = '';
     var grades = [11, 12];
+    if (typeof globalSettings !== 'undefined' && globalSettings.system_lists) {
+        try {
+            var parsed = JSON.parse(globalSettings.system_lists);
+            if (parsed.grade_levels) {
+                grades = parsed.grade_levels.map(g => parseInt(g.replace(/\D/g, ''))).filter(n => !isNaN(n));
+            }
+        } catch(e){}
+    }
     for (var gi = 0; gi < grades.length; gi++) {
         var g = grades[gi];
         gradeTabs +=
@@ -179,11 +217,11 @@ function renderSHSubjects(area) {
         }
     } catch (e) { subjects = []; }
 
-    var isTVLorHUMSS = subPageStrand === 'TVL' || subPageStrand === 'HUMSS';
+    var isTechPro = subPageStrand === 'TechPro';
     var c2 = strandColors[subPageStrand] || { bg: 'bg-gray-600', light: 'bg-gray-50', text: 'text-gray-700' };
 
     var bodyHtml = '';
-    if (isTVLorHUMSS && subjects.length === 0) {
+    if (false) { // Condition removed because the variable isTVLorHUMSS is undefined
         bodyHtml =
             '<div class="py-16 text-center text-gray-400">' +
             '<i class="fas fa-clock text-4xl mb-3 opacity-20"></i>' +
@@ -321,10 +359,22 @@ function deleteSubject(key, idx) {
     var list = getCustomSubjectList(key);
     var name = list[idx];
     if (!confirm('Delete subject "' + name + '"?')) return;
+    
     list.splice(idx, 1);
     setCustomSubjectList(key, list);
-    showMessage('"' + name + '" deleted.');
     renderSubjectContent();
+    
+    showUndoToast(`Deleted subject "${name}"`, 
+    async () => {
+        var listNow = getCustomSubjectList(key);
+        listNow.splice(idx, 0, name);
+        setCustomSubjectList(key, listNow);
+        renderSubjectContent();
+        showMessage('Subject restored.');
+    }, 
+    async () => {
+        // No server finalize needed, already saved to local storage
+    });
 }
 
 // ─── AI SUBJECT SCAN ───────────────────────────────────────────────────────────
@@ -417,7 +467,7 @@ function applyScannedSubjectsList(subjects) {
         var jhGrade = document.getElementById('scan-jh-grade') ? document.getElementById('scan-jh-grade').value : '7';
         key = 'JH_' + jhGrade;
     } else {
-        var strand = document.getElementById('scan-strand') ? document.getElementById('scan-strand').value : 'ABM';
+        var strand = document.getElementById('scan-strand') ? document.getElementById('scan-strand').value : 'Academic';
         var grade = document.getElementById('scan-grade') ? document.getElementById('scan-grade').value : '11';
         var sem = document.getElementById('scan-sem') ? document.getElementById('scan-sem').value : '1';
         key = 'SH_' + strand + '_' + grade + '_sem' + sem;
@@ -431,7 +481,7 @@ function applyScannedSubjectsList(subjects) {
     showMessage('Added ' + toAdd.length + ' new subject' + (toAdd.length !== 1 ? 's' : '') + '.');
     subPageLevel = level;
     if (level === 'SH') {
-        subPageStrand = document.getElementById('scan-strand') ? document.getElementById('scan-strand').value : 'ABM';
+        subPageStrand = document.getElementById('scan-strand') ? document.getElementById('scan-strand').value : 'Academic';
         subPageGrade = parseInt(document.getElementById('scan-grade') ? document.getElementById('scan-grade').value : '11');
         subPageSem = parseInt(document.getElementById('scan-sem') ? document.getElementById('scan-sem').value : '1');
     } else {

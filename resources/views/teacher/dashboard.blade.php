@@ -1,3 +1,2 @@
 {{-- resources/views/teacher/dashboard.blade.php --}}
-@extends('dash.main')
-
+@extends ('dash.main')

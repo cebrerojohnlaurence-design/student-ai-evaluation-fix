@@ -6,27 +6,46 @@
 // ─── State ────────────────────────────────────────────────────────────────────
 let teacherLevelFilter = 'ALL'; // 'ALL' | 'JH' | 'SH'
 
-function renderManageTeachers(container) {
+async function renderManageTeachers(container) {
+    if (typeof fetchSettings === 'function') {
+        await fetchSettings();
+    }
     const levelColors = { JH: 'bg-green-100 text-green-700', SH: 'bg-blue-100 text-blue-700' };
-    const strandColor = {
-        ABM: 'bg-blue-50 text-blue-600', STEM: 'bg-purple-50 text-purple-600',
-        GAS: 'bg-amber-50 text-amber-600', TVL: 'bg-orange-50 text-orange-600',
-        HUMSS: 'bg-pink-50 text-pink-600'
+    const strandBadgeColors = {
+        Academic: 'bg-blue-50 text-blue-600', TechPro: 'bg-green-50 text-green-600'
     };
 
     // Filter teachers by level
-    const filtered = teacherLevelFilter === 'ALL' ? teachers :
-        teachers.filter(t => (t.level || 'JH') === teacherLevelFilter);
+    let filtered = teachers;
+    if (currentUser.role === 'curriculum_coordinator') {
+        if (currentUser.department === 'JHS') {
+            filtered = teachers.filter(t => (t.level || 'JH') === 'JH');
+            teacherLevelFilter = 'JH';
+        } else if (currentUser.department === 'SHS') {
+            filtered = teachers.filter(t => (t.level || 'JH') === 'SH');
+            teacherLevelFilter = 'SH';
+        }
+    } else {
+        filtered = teacherLevelFilter === 'ALL' ? teachers : teachers.filter(t => (t.level || 'JH') === teacherLevelFilter);
+    }
 
-    const levelBtns = ['ALL', 'JH', 'SH'].map(l => {
-        const active = l === teacherLevelFilter;
-        const labels = { ALL: 'All', JH: 'Junior High', SH: 'Senior High' };
-        return `<button onclick="setTeacherLevelFilter('${l}')"
-            class="px-4 py-1.5 rounded-full text-xs font-bold border transition
-            ${active ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary'}">
-            ${labels[l]}
-        </button>`;
-    }).join('');
+    let levelBtns = '';
+    if (currentUser.role !== 'curriculum_coordinator') {
+        levelBtns = ['ALL', 'JH', 'SH'].map(l => {
+            const active = l === teacherLevelFilter;
+            const labels = { ALL: 'All', JH: 'Junior High', SH: 'Senior High' };
+            return `<button onclick="setTeacherLevelFilter('${l}')"
+                class="px-4 py-1.5 rounded-full text-xs font-bold border transition
+                ${active ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary'}">
+                ${labels[l]}
+            </button>`;
+        }).join('');
+    }
+
+    let strandOptionsHtml = SH_STRANDS.map(s => `<option value="${s}">${s}</option>`).join('');
+    if (currentUser.role === 'curriculum_coordinator' && currentUser.department === 'SHS' && currentUser.strand) {
+        strandOptionsHtml = `<option value="${currentUser.strand}" selected>${currentUser.strand} Track</option>`;
+    }
 
     container.innerHTML = `
         <div class="animate-fade-in max-w-5xl mx-auto">
@@ -67,11 +86,11 @@ function renderManageTeachers(container) {
                                 <label class="text-xs font-bold text-gray-500 uppercase block mb-1.5">School Level</label>
                                 <div class="grid grid-cols-2 gap-2">
                                     <button type="button" id="level-btn-JH" onclick="setTeacherFormLevel('JH')"
-                                        class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-primary bg-primary text-white">
+                                        class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-primary bg-primary text-white ${currentUser.role === 'curriculum_coordinator' && currentUser.department === 'SHS' ? 'hidden' : ''}">
                                         <i class="fas fa-school mr-1"></i> Junior High
                                     </button>
                                     <button type="button" id="level-btn-SH" onclick="setTeacherFormLevel('SH')"
-                                        class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">
+                                        class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary ${currentUser.role === 'curriculum_coordinator' && currentUser.department === 'JHS' ? 'hidden' : ''}">
                                         <i class="fas fa-graduation-cap mr-1"></i> Senior High
                                     </button>
                                 </div>
@@ -83,7 +102,7 @@ function renderManageTeachers(container) {
                                 <label class="text-xs font-bold text-gray-500 uppercase block mb-1.5">Strand</label>
                                 <select id="t-strand" onchange="refreshTeacherSubjectCheckboxes()"
                                     class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-primary bg-white">
-                                    ${SH_STRANDS.map(s => `<option value="${s}">${s}</option>`).join('')}
+                                    ${strandOptionsHtml}
                                 </select>
                             </div>
 
@@ -133,7 +152,7 @@ function renderManageTeachers(container) {
             : filtered.map(t => {
                 const lvl = t.level || 'JH';
                 const lvlClass = levelColors[lvl] || 'bg-gray-100 text-gray-600';
-                const strand = t.strand ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${strandColor[t.strand] || 'bg-gray-100 text-gray-600'}">${t.strand}</span>` : '';
+                const strand = t.strand ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${strandBadgeColors[t.strand] || 'bg-gray-100 text-gray-600'}">${t.strand}</span>` : '';
                 return `
                                         <tr class="hover:bg-gray-50 transition">
                                             <td class="px-5 py-3.5">
@@ -169,7 +188,14 @@ function renderManageTeachers(container) {
         </div>
     `;
     // Populate subject checkboxes for the default JH level immediately after DOM is injected
-    setTimeout(() => refreshTeacherSubjectCheckboxes(), 0);
+    setTimeout(() => {
+        if (currentUser.role === 'curriculum_coordinator') {
+            if (currentUser.department === 'SHS') setTeacherFormLevel('SH');
+            else setTeacherFormLevel('JH');
+        } else {
+            refreshTeacherSubjectCheckboxes();
+        }
+    }, 0);
 }
 
 // ─── Form Helpers ─────────────────────────────────────────────────────────────
@@ -201,12 +227,24 @@ function refreshTeacherSubjectCheckboxes(preChecked) {
     if (!box) return;
 
     const level = document.getElementById('t-level')?.value || 'JH';
-    const strand = document.getElementById('t-strand')?.value || 'ABM';
+    const strand = document.getElementById('t-strand')?.value || 'Academic';
 
     // Build the subject list from SUBJECT_CATALOG
     let subjects = [];
+    const seen = new Set();
+    
+    // Merge dynamically added subjects from settings if available
+    let dynamicJH = [];
+    let dynamicSH = [];
+    if (typeof globalSettings !== 'undefined' && globalSettings.system_lists) {
+        try {
+            const parsed = JSON.parse(globalSettings.system_lists);
+            if (parsed.jh_subjects) dynamicJH = parsed.jh_subjects;
+            if (parsed.sh_subjects) dynamicSH = parsed.sh_subjects;
+        } catch (e) {}
+    }
+
     if (level === 'JH') {
-        const seen = new Set();
         [7, 8, 9, 10].forEach(g => {
             if (SUBJECT_CATALOG.JH[g] && SUBJECT_CATALOG.JH[g].subjects) {
                 SUBJECT_CATALOG.JH[g].subjects.forEach(sub => { if (!seen.has(sub)) { seen.add(sub); subjects.push(sub); } });
@@ -215,11 +253,11 @@ function refreshTeacherSubjectCheckboxes(preChecked) {
         if (SUBJECT_CATALOG.JH.subjects) {
             SUBJECT_CATALOG.JH.subjects.forEach(sub => { if (!seen.has(sub)) { seen.add(sub); subjects.push(sub); } });
         }
+        dynamicJH.forEach(sub => { if (!seen.has(sub)) { seen.add(sub); subjects.push(sub); } });
     } else {
         // Combine all grades+sems for the strand (unique)
         const sd = SUBJECT_CATALOG.SH[strand];
         if (sd) {
-            const seen = new Set();
             [11, 12].forEach(g => {
                 ['sem1', 'sem2'].forEach(s => {
                     if (sd[g] && sd[g][s]) {
@@ -228,6 +266,7 @@ function refreshTeacherSubjectCheckboxes(preChecked) {
                 });
             });
         }
+        dynamicSH.forEach(sub => { if (!seen.has(sub)) { seen.add(sub); subjects.push(sub); } });
     }
 
     const checked = preChecked || [];
@@ -271,7 +310,11 @@ async function saveTeacher(e) {
     const name = document.getElementById('t-name').value.trim();
     const user = document.getElementById('t-user').value.trim();
     const pass = document.getElementById('t-pass').value;
-    const level = document.getElementById('t-level').value || 'JH';
+    let level = document.getElementById('t-level').value || 'JH';
+    if (currentUser.role === 'curriculum_coordinator') {
+        if (currentUser.department === 'SHS') level = 'SH';
+        else if (currentUser.department === 'JHS') level = 'JH';
+    }
     const strand = level === 'SH' ? (document.getElementById('t-strand')?.value || null) : null;
 
     const btn = document.getElementById('save-teacher-btn');
@@ -349,13 +392,34 @@ function editTeacher(id) {
 async function deleteTeacher(dbId, tid) {
     const t = teachers.find(x => x.id === tid);
     if (!t || !confirm(`Delete teacher ${t.name}?`)) return;
-    try {
-        const res = await fetch(`/api/teachers/${dbId}`, { method: 'DELETE', headers: { 'Accept': 'application/json' } });
-        if (res.ok) {
-            teachers = teachers.filter(x => x.id !== tid);
-            logActivity(`Admin deleted teacher: ${t.name}`);
-            showMessage('Teacher removed.');
+    
+    // Optimistically remove from UI
+    teachers = teachers.filter(x => x.id !== tid);
+    navigate('manage-teachers');
+    
+    showUndoToast(`Deleted teacher ${t.name}`, 
+    async () => {
+        // Undo Action
+        teachers.push(t);
+        navigate('manage-teachers');
+        showMessage('Teacher restored.');
+    }, 
+    async () => {
+        // Finalize Action
+        try {
+            const res = await fetch(`/api/teachers/${dbId}`, { method: 'DELETE', headers: { 'Accept': 'application/json' } });
+            if (res.ok) {
+                logActivity(`Admin deleted teacher: ${t.name}`);
+                showMessage('Teacher removed.');
+            } else {
+                showMessage('Failed to delete.', true);
+                teachers.push(t);
+                navigate('manage-teachers');
+            }
+        } catch {
+            showMessage('Network error.', true);
+            teachers.push(t);
             navigate('manage-teachers');
-        } else { showMessage('Failed to delete.', true); }
-    } catch { showMessage('Network error.', true); }
+        }
+    });
 }

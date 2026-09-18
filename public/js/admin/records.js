@@ -500,11 +500,24 @@ function renderAdviserSectionStudents(container) {
             let badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-gray-100 text-gray-500">No Grades</span>';
             const gwaVal = parseFloat(displayGWA);
             if (!isNaN(gwaVal)) {
-                if (gwaVal >= 98) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Highest Honor</span>';
-                else if (gwaVal >= 95) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 font-bold">High Honor</span>';
-                else if (gwaVal >= 90) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 font-bold">With Honor</span>';
-                else if (gwaVal >= 75) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
-                else if (gwaVal > 0) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                const isSH = window.currentRecordGradeLevel >= 11;
+                const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+
+                if (isSH) {
+                    if (gwaVal >= 90 && !hasFailing) {
+                        badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Academic Excellence Award</span>';
+                    } else if (gwaVal >= 75) {
+                        badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
+                    } else if (gwaVal > 0) {
+                        badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                    }
+                } else {
+                    if (gwaVal >= 98 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Highest Honor</span>';
+                    else if (gwaVal >= 95 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 font-bold">High Honor</span>';
+                    else if (gwaVal >= 90 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 font-bold">With Honor</span>';
+                    else if (gwaVal >= 75) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
+                    else if (gwaVal > 0) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                }
             }
 
             return '<tr class="hover:bg-blue-50/30 transition border-b border-gray-50">' +
@@ -525,6 +538,8 @@ function renderAdviserSectionStudents(container) {
                 '</td>' +
                 '</tr>';
         }).join('');
+
+    const isSHS = sec.toLowerCase().includes('grade 11') || sec.toLowerCase().includes('grade 12') || sec.toLowerCase().includes('gr 11') || sec.toLowerCase().includes('gr 12') || window.studentsAnalyticsLevel === 'SH';
 
     container.innerHTML = `
             <div class= "flex flex-col gap-4 animate-slide-up" style = "height: calc(100vh - 140px);">
@@ -550,16 +565,27 @@ function renderAdviserSectionStudents(container) {
                     <!-- Right side top bar -->
                     <div class="flex gap-2 items-center flex-wrap">
                         <select onchange="setRecordQuarter(this.value)" class="px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] outline-none focus:border-primary transition font-bold text-gray-700 bg-white shadow-sm h-[34px]">
-                            <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>All Quarters</option>
-                            <option value="1" ${window.currentRecordQuarter == 1 ? 'selected' : ''}>Quarter 1</option>
-                            <option value="2" ${window.currentRecordQuarter == 2 ? 'selected' : ''}>Quarter 2</option>
-                            <option value="3" ${window.currentRecordQuarter == 3 ? 'selected' : ''}>Quarter 3</option>
-                            <option value="4" ${window.currentRecordQuarter == 4 ? 'selected' : ''}>Quarter 4</option>
+                            <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>${isSHS ? 'All Terms' : 'All Quarters'}</option>
+                            ${(function() {
+                                let gpList = ['1', '2', '3', '4'];
+                                if (typeof globalSettings !== 'undefined' && globalSettings['grading_periods']) {
+                                    try {
+                                        let parsed = JSON.parse(globalSettings['grading_periods']);
+                                        if (Array.isArray(parsed) && parsed.length > 0) gpList = parsed;
+                                    } catch(e){}
+                                }
+                                return gpList.map(gp => {
+                                    let label = isSHS ? 'Term ' + gp : gp + (gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th') + ' Quarter';
+                                    return `<option value="${gp}" ${window.currentRecordQuarter == gp ? 'selected' : ''}>${label}</option>`;
+                                }).join('');
+                            })()}
                         </select>
+                        ${!isSHS ? `
                         <div class="flex items-center bg-white border border-gray-200 rounded-lg p-0.5 h-[34px]">
                             <button onclick="setRecordSemester(1)" class="px-3 py-1 rounded-md text-[10px] font-bold uppercase transition ${window.currentRecordSemester === 1 ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}">1st Sem</button>
                             <button onclick="setRecordSemester(2)" class="px-3 py-1 rounded-md text-[10px] font-bold uppercase transition ${window.currentRecordSemester === 2 ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}">2nd Sem</button>
                         </div>
+                        ` : ''}
                         <div class="relative h-[34px]">
                             <i class="fas fa-search absolute left-3 top-2.5 text-gray-300 text-[10px]"></i>
                             <input type="text" value="${adviserSearch}"
@@ -630,16 +656,25 @@ function renderAdminTeacherList(container) {
             derivedSections.includes(search)
         );
     });
-    // Apply JH/SH filter
-    if (adminLevelFilter !== 'ALL') {
-        filtered = filtered.filter(t => (t.level || 'JH') === adminLevelFilter);
+    let levelBtnsHtml = '';
+    
+    if (currentUser.role === 'curriculum_coordinator') {
+        if (currentUser.department === 'JHS') {
+            filtered = filtered.filter(t => (t.level || 'JH') === 'JH');
+        } else if (currentUser.department === 'SHS') {
+            filtered = filtered.filter(t => (t.level || 'JH') === 'SH');
+        }
+    } else {
+        // Apply JH/SH filter for non-coordinators
+        if (adminLevelFilter !== 'ALL') {
+            filtered = filtered.filter(t => (t.level || 'JH') === adminLevelFilter);
+        }
+        levelBtnsHtml = ['ALL', 'JH', 'SH'].map(l => {
+            const labels = { ALL: 'All Levels', JH: 'Junior High', SH: 'Senior High' };
+            const active = l === adminLevelFilter;
+            return `<button onclick="setAdminLevelFilter('${l}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition ${active ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary'}"> ${labels[l]}</button>`;
+        }).join('');
     }
-
-    const levelBtns = ['ALL', 'JH', 'SH'].map(l => {
-        const labels = { ALL: 'All Levels', JH: 'Junior High', SH: 'Senior High' };
-        const active = l === adminLevelFilter;
-        return `<button onclick = "setAdminLevelFilter('${l}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition ${active ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary'}"> ${labels[l]}</button> `;
-    }).join('');
 
     container.innerHTML = `
             <div class="flex flex-col gap-6 animate-slide-up">
@@ -660,7 +695,7 @@ function renderAdminTeacherList(container) {
                         </button>
                     </div>
                     <!-- Level filter pills (teachers tab only) -->
-                    <div class="flex gap-2 flex-wrap">${levelBtns}</div>
+                    <div class="flex gap-2 flex-wrap">${levelBtnsHtml}</div>
                     <!-- Search bar (teachers tab only) -->
                     <div class="relative w-full md:w-72">
                         <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
@@ -779,6 +814,15 @@ function renderAdminStudentsAnalytics(container) {
         if (s.match(/\b9\b/) || s.startsWith('9-')) return 'Grade 9';
         if (s.match(/\b8\b/) || s.startsWith('8-')) return 'Grade 8';
         if (s.match(/\b7\b/) || s.startsWith('7-')) return 'Grade 7';
+        
+        if (typeof teachers !== 'undefined') {
+            const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s));
+            if (adv) {
+                if (adv.level === 'SH') return 'Grade 11';
+                if (adv.level === 'JH') return 'Grade 7';
+            }
+        }
+        
         return null;
     }
 
@@ -807,7 +851,10 @@ function renderAdminStudentsAnalytics(container) {
     const filtered = getFilteredStudents();
     const withGrades = filtered.filter(s => s.gwa > 0);
     const avgGwa = withGrades.length ? (withGrades.reduce((sum, s) => sum + s.gwa, 0) / withGrades.length).toFixed(2) : '--';
-    const honors = withGrades.filter(s => s.gwa >= 90).length;
+    const honors = withGrades.filter(s => {
+        const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+        return s.gwa >= 90 && !hasFailing;
+    }).length;
     const passing = withGrades.filter(s => s.gwa >= 75 && s.gwa < 90).length;
     const atRisk = withGrades.filter(s => s.gwa > 0 && s.gwa < 75).length;
 
@@ -840,7 +887,8 @@ function renderAdminStudentsAnalytics(container) {
         if (s.gwa > 0) {
             sectionMap[s.section].withGwa++;
             sectionMap[s.section].gwaSum += s.gwa;
-            if (s.gwa >= 90) sectionMap[s.section].honor++;
+            const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+            if (s.gwa >= 90 && !hasFailing) sectionMap[s.section].honor++;
             if (s.gwa < 75) sectionMap[s.section].atRisk++;
         }
     });
@@ -849,13 +897,15 @@ function renderAdminStudentsAnalytics(container) {
     const secHonors = secLabels.map(sec => sectionMap[sec].honor);
     const secAtRisk = secLabels.map(sec => sectionMap[sec].atRisk);
 
-    // ── Student list (last 8, sorted by GWA desc) ──
-    const listStudents = [...withGrades].sort((a, b) => b.gwa - a.gwa).slice(0, 10);
+    // ── Student list (alphabetical order) ──
+    const listStudents = [...withGrades].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 10);
 
     const studentListHtml = listStudents.length === 0
         ? '<p class="text-gray-400 italic text-sm text-center py-6">No graded students in this selection.</p>'
         : listStudents.map((s, i) => {
-            const badge = s.gwa >= 90 ? '<span class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[9px] font-bold">With Honors</span>'
+            const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+            const isStudentHonors = s.gwa >= 90 && !hasFailing;
+            const badge = isStudentHonors ? '<span class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[9px] font-bold">With Honors</span>'
                 : s.gwa < 75 ? '<span class="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[9px] font-bold">At Risk</span>' : '';
             const gwaColor = s.gwa >= 90 ? 'text-yellow-600' : s.gwa < 75 ? 'text-red-500' : 'text-green-600';
             return '<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-b-0">' +
@@ -970,6 +1020,26 @@ function renderAdminStudentsAnalytics(container) {
                     ${studentListHtml}
                 </div>
             </div>
+
+            <!-- New Section: Full Grading Table -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mt-4">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-table mr-2 text-primary"></i>Master Grading Table</h3>
+                        <p class="text-xs text-gray-400 mt-1">Select a section to view all student grades in detail.</p>
+                    </div>
+                    <div class="w-full md:w-64">
+                        <select onchange="window.studentsAnalyticsSelectedSection = this.value; renderAdminStudentsAnalytics(document.getElementById('content-area'));" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-primary transition">
+                            <option value="">-- Select Section --</option>
+                            ${secLabels.map(sec => `<option value="${sec}" ${window.studentsAnalyticsSelectedSection === sec ? 'selected' : ''}>${sec}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="analytics-grading-table-container" class="overflow-x-auto w-full rounded-xl border border-gray-100 bg-gray-50/50">
+                    <!-- Table will be rendered here if a section is selected -->
+                </div>
+            </div>
         </div>
             `;
 
@@ -1045,6 +1115,79 @@ function renderAdminStudentsAnalytics(container) {
                     }
                 }
             });
+        }
+        
+        // Render Master Grading Table if a section is selected
+        const tableContainer = document.getElementById('analytics-grading-table-container');
+        if (tableContainer) {
+            if (window.studentsAnalyticsSelectedSection) {
+                const secStr = window.studentsAnalyticsSelectedSection;
+                let secStudents = students.filter(s => s.section === secStr);
+                const subjectHeaders = coreSubjects.map(sub => '<th class="static-cell text-gray-600">' + sub + '</th>').join('');
+                
+                const rows = secStudents.length === 0
+                    ? '<tr><td colspan="30" class="py-12 text-center text-gray-400 italic">No students found.</td></tr>'
+                    : secStudents.map(s => {
+                        const subCols = coreSubjects.map(subName => {
+                            const subData = s.subjects && s.subjects.find(x => x.n === subName);
+                            let grade = subData && subData.g !== null && subData.g !== undefined ? subData.g : '-';
+                            const color = (grade !== '-' && grade < 75) ? 'text-red-500 font-bold' : 'text-gray-700';
+                            return '<td class="static-cell ' + color + '">' + grade + '</td>';
+                        }).join('');
+
+                        let displayGWA = s.gwa > 0 ? s.gwa : '-';
+                        let badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-gray-100 text-gray-500">No Grades</span>';
+                        const gwaVal = parseFloat(displayGWA);
+                        if (!isNaN(gwaVal)) {
+                            const isSH = window.currentRecordGradeLevel >= 11;
+                            const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+                            if (isSH) {
+                                if (gwaVal >= 90 && !hasFailing) {
+                                    badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Academic Excellence Award</span>';
+                                } else if (gwaVal >= 75) {
+                                    badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
+                                } else if (gwaVal > 0) {
+                                    badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                                }
+                            } else {
+                                if (gwaVal >= 98 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Highest Honor</span>';
+                                else if (gwaVal >= 95 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 font-bold">High Honor</span>';
+                                else if (gwaVal >= 90 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 font-bold">With Honor</span>';
+                                else if (gwaVal >= 75) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
+                                else if (gwaVal > 0) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                            }
+                        }
+
+                        return '<tr class="hover:bg-blue-50/30 transition border-b border-gray-50">' +
+                            '<td class="student-name border-r border-gray-100 font-semibold text-gray-800">' + s.name + '</td>' +
+                            '<td class="static-cell font-mono text-gray-400 text-[10px] border-r border-gray-100">' + s.lrn + '</td>' +
+                            subCols +
+                            '<td class="static-cell font-bold text-primary bg-blue-50/30 border-l-2 border-blue-200">' + displayGWA + '</td>' +
+                            '<td class="static-cell">' + (s.attendance > 0 ? s.attendance + '%' : '-') + '</td>' +
+                            '<td class="static-cell">' + badge + '</td>' +
+                            '<td class="static-cell flex gap-2">' +
+                            `<button onclick="if(typeof showReport === 'function'){showReport(students.find(x => x.lrn === '${s.lrn}'))}" class="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-100 transition border border-blue-100"><i class="fas fa-print"></i></button>` +
+                            '</td>' +
+                            '</tr>';
+                    }).join('');
+                
+                tableContainer.innerHTML = `<table class="w-full excel-table border-collapse min-w-[600px]">
+                        <thead>
+                            <tr>
+                                <th class="w-48 text-left static-cell">Full Name</th>
+                                <th class="static-cell">LRN</th>
+                                ${subjectHeaders}
+                                <th class="bg-blue-50 text-blue-800 border-b-2 border-blue-200 static-cell">GWA</th>
+                                <th class="static-cell">Att %</th>
+                                <th class="static-cell">Status</th>
+                                <th class="static-cell">Report</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>`;
+            } else {
+                tableContainer.innerHTML = '<div class="py-12 text-center text-gray-400 italic">Please select a section from the dropdown above to view the detailed grading table.</div>';
+            }
         }
     }, 100);
 }
@@ -1184,6 +1327,8 @@ function renderAdminSectionStudents(container) {
         );
     }
 
+    const isSHS = sec.toLowerCase().includes('grade 11') || sec.toLowerCase().includes('grade 12') || sec.toLowerCase().includes('gr 11') || sec.toLowerCase().includes('gr 12') || window.studentsAnalyticsLevel === 'SH';
+
     container.innerHTML = `
             <div class="flex flex-col gap-4 animate-slide-up" style = "height: calc(100vh - 140px);">
 
@@ -1210,11 +1355,20 @@ function renderAdminSectionStudents(container) {
                     </div>
                     <div class="flex gap-2 items-center flex-wrap">
                         <select onchange="setRecordQuarter(this.value)" class="px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] outline-none focus:border-primary transition font-bold text-gray-700 bg-white shadow-sm h-[34px]">
-                            <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>All Quarters</option>
-                            <option value="1" ${window.currentRecordQuarter == 1 ? 'selected' : ''}>Quarter 1</option>
-                            <option value="2" ${window.currentRecordQuarter == 2 ? 'selected' : ''}>Quarter 2</option>
-                            <option value="3" ${window.currentRecordQuarter == 3 ? 'selected' : ''}>Quarter 3</option>
-                            <option value="4" ${window.currentRecordQuarter == 4 ? 'selected' : ''}>Quarter 4</option>
+                            <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>${isSHS ? 'All Terms' : 'All Quarters'}</option>
+                            ${(function() {
+                                let gpList = ['1', '2', '3', '4'];
+                                if (typeof globalSettings !== 'undefined' && globalSettings['grading_periods']) {
+                                    try {
+                                        let parsed = JSON.parse(globalSettings['grading_periods']);
+                                        if (Array.isArray(parsed) && parsed.length > 0) gpList = parsed;
+                                    } catch(e){}
+                                }
+                                return gpList.map(gp => {
+                                    let label = isSHS ? 'Term ' + gp : gp + (gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th') + ' Quarter';
+                                    return `<option value="${gp}" ${window.currentRecordQuarter == gp ? 'selected' : ''}>${label}</option>`;
+                                }).join('');
+                            })()}
                         </select>
                         <div class="relative h-[34px]">
                             <i class="fas fa-search absolute left-3 top-2.5 text-gray-300 text-[10px]"></i>
@@ -1229,6 +1383,10 @@ function renderAdminSectionStudents(container) {
                         </div>
                         <button onclick="document.getElementById('qr-scan-modal').classList.remove('hidden')" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold uppercase shadow-sm transition">
                             <i class="fas fa-qrcode mr-1"></i>Scan QR
+                        </button>
+                        <button onclick="printReport('${sec} - Student Records')"
+                                class="px-4 py-2 bg-purple-500 text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-purple-600 transition">
+                            <i class="fas fa-print mr-1"></i>Print Report
                         </button>
                         <button onclick="openGradesModal()"
                             class="px-4 py-2 bg-primary text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-primaryDark transition">
@@ -1272,11 +1430,24 @@ function renderAdminSectionStudents(container) {
                 }).join('');
 
                 let badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-gray-100 text-gray-500">No Grades</span>';
-                if (s.gwa >= 98) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Highest Honor</span>';
-                else if (s.gwa >= 95) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 font-bold">High Honor</span>';
-                else if (s.gwa >= 90) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 font-bold">With Honor</span>';
-                else if (s.gwa >= 75) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
-                else if (s.gwa > 0) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                const isSH = window.currentRecordGradeLevel >= 11;
+                const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+                
+                if (isSH) {
+                    if (s.gwa >= 90 && !hasFailing) {
+                        badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Academic Excellence Award</span>';
+                    } else if (s.gwa >= 75) {
+                        badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
+                    } else if (s.gwa > 0) {
+                        badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                    }
+                } else {
+                    if (s.gwa >= 98 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Highest Honor</span>';
+                    else if (s.gwa >= 95 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 font-bold">High Honor</span>';
+                    else if (s.gwa >= 90 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 font-bold">With Honor</span>';
+                    else if (s.gwa >= 75) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
+                    else if (s.gwa > 0) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                }
 
                 return `
                                     <tr class="hover:bg-blue-50/30 transition border-b border-gray-50">
@@ -1411,16 +1582,17 @@ function renderMasterRecordsView(container) {
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <div class="flex items-center bg-gray-200 rounded-full p-0.5 mr-3">
-                        ${[1, 2, 3, 4].map(q => `
+                        ${(window.studentsAnalyticsLevel === 'SH' ? [1, 2, 3] : [1, 2, 3, 4]).map(q => `
                             <button onclick="setRecordQuarter(${q})"
                                     class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
                                            ${window.currentRecordQuarter === q
             ? 'bg-white text-primary shadow-sm'
             : 'text-gray-500 hover:bg-white/50 hover:text-gray-700'}">
-                                Q${q}
+                                ${window.studentsAnalyticsLevel === 'SH' ? 'T' : 'Q'}${q}
                             </button>
                         `).join('')}
                     </div>
+                    ${window.studentsAnalyticsLevel !== 'SH' ? `
                     <div class="flex items-center bg-gray-200 rounded-full p-0.5 mr-3">
                         <button onclick="setRecordSemester(1)"
                                 class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
@@ -1437,6 +1609,7 @@ function renderMasterRecordsView(container) {
                             2nd Sem
                         </button>
                     </div>
+                    ` : ''}
                     ${currentUser.role === 'admin' ? `
                     <button onclick="setPinnedSection('all')"
                             class="px-3 py-1.5 rounded-full text-[10px] font-bold border uppercase tracking-wide transition shadow-sm
@@ -1641,18 +1814,15 @@ function renderDetailedSubjectView(container, subject) {
     }
 
     const quarterBtnsHtml = isSHS 
-        ? [1, 2].map(q => {
-            const actualQ = window.currentRecordSemester === 2 ? q + 2 : q;
-            return `
-            <button onclick="setRecordQuarter(${actualQ})"
+        ? [1, 2, 3].map(q => `
+            <button onclick="setRecordQuarter(${q})"
                 class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
-                               ${(window.currentRecordQuarter || 1) === actualQ
+                               ${(window.currentRecordQuarter || 1) === q
                     ? 'bg-white text-primary shadow-sm'
                     : 'text-white/80 hover:bg-white/20 hover:text-white'
                 }">
-                Q${actualQ} <span class="opacity-50 text-[8px]">(${window.currentRecordSemester === 2 ? '2nd' : '1st'} Sem)</span>
-            </button>`;
-          }).join('')
+                Term ${q}
+            </button>`).join('')
         : [1, 2, 3, 4].map(q => `
             <button onclick = "setRecordQuarter(${q})"
         class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
@@ -1696,7 +1866,11 @@ function renderDetailedSubjectView(container, subject) {
                         </button>
                         <button onclick="openScanner('CLASS_RECORD')"
                                 class="px-3 py-1.5 bg-accent text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-yellow-600 transition">
-                            <i class="fas fa-camera mr-1"></i>Scan Written Record
+                            <i class="fas fa-camera mr-1"></i>Scan Record
+                        </button>
+                        <button onclick="printReport('${subject} E-Class Record - Q${window.currentRecordQuarter || 1}')"
+                                class="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-purple-600 transition">
+                            <i class="fas fa-print mr-1"></i>Print Grades
                         </button>
                     </div>
                 </div>
@@ -1734,20 +1908,24 @@ function renderDetailedSubjectView(container, subject) {
                             <th colspan="${MAX_WW + 3}" class="bg-blue-50 text-blue-800 border-b border-blue-200 static-cell">
                                 <div class="flex items-center justify-center gap-2">
                                     <button onclick="removeWWColumn()" class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-blue-200 text-blue-600 font-bold px-1 py-1" title="Remove last WW column" ${MAX_WW <= 1 ? 'disabled style="opacity:0.3;"' : ''}>-</button>
-                                    <span>Written Works (${wwWeight}%)</span>
+                                    <span class="cursor-pointer hover:underline tooltip-trigger flex items-center gap-1" title="Edit Grading Weights" onclick="openGradingWeightsModal('${subject}')">Written Works (${wwWeight}%) <i class="fas fa-edit text-[10px]"></i></span>
                                     <button onclick="addWWColumn()" class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-blue-200 text-blue-600 font-bold px-1 py-1" title="Add WW column" ${MAX_WW >= 10 ? 'disabled style="opacity:0.3;"' : ''}>+</button>
                                 </div>
                             </th>
                             <th colspan="${MAX_PT + 3}" class="bg-green-50 text-green-800 border-b border-green-200 static-cell">
                                 <div class="flex items-center justify-center gap-2">
                                     <button onclick="removePTColumn()" class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-green-200 text-green-600 font-bold px-1 py-1" title="Remove last PT column" ${MAX_PT <= 1 ? 'disabled style="opacity:0.3;"' : ''}>-</button>
-                                    <span>Performance Tasks (${ptWeight}%)</span>
+                                    <span class="cursor-pointer hover:underline tooltip-trigger flex items-center gap-1" title="Edit Grading Weights" onclick="openGradingWeightsModal('${subject}')">Performance Tasks (${ptWeight}%) <i class="fas fa-edit text-[10px]"></i></span>
                                     <button onclick="addPTColumn()" class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-green-200 text-green-600 font-bold px-1 py-1" title="Add PT column" ${MAX_PT >= 10 ? 'disabled style="opacity:0.3;"' : ''}>+</button>
                                 </div>
                             </th>
-                            <th colspan="3" class="bg-purple-50 text-purple-800 border-b border-purple-200 static-cell">Assessment (${qaWeight}%)</th>
+                            <th colspan="3" class="bg-purple-50 text-purple-800 border-b border-purple-200 static-cell">
+                                <div class="flex items-center justify-center gap-2">
+                                    <span class="cursor-pointer hover:underline tooltip-trigger flex items-center gap-1" title="Edit Grading Weights" onclick="openGradingWeightsModal('${subject}')">Assessment (${qaWeight}%) <i class="fas fa-edit text-[10px]"></i></span>
+                                </div>
+                            </th>
                             <th rowspan="2" class="bg-gray-200 static-cell border-l-2 border-gray-300 w-16">Initial Grade</th>
-                            <th rowspan="2" class="bg-gray-300 static-cell border-l-2 border-gray-400 w-16 text-xs shadow-sm">Quarterly Grade</th>
+                            <th rowspan="2" class="bg-gray-300 static-cell border-l-2 border-gray-400 w-16 text-xs shadow-sm">${isSHS ? 'Term Grade' : 'Quarterly Grade'}</th>
                         </tr>
                         <tr>
                             ${wwHeaders}
@@ -1813,18 +1991,6 @@ function setSubjectView(sub) {
 }
 
 // ─── SHARED FILTER / TABLE RENDER ─────────────────────────────────────────────
-function setRecordQuarter(q) {
-    window.currentRecordQuarter = q;
-    window.currentRecordSemester = null;
-    students.forEach(s => {
-        if (s.allSubjects) {
-            s.subjects = s.allSubjects.filter(sub => (sub.quarter || 1) == q);
-            s.subjects.forEach(sub => recalcStudentSubject(s, sub.n));
-            computeStudentGWA(s);
-        }
-    });
-    renderRecords(document.getElementById('content-area'));
-}
 
 function updateMaxScore(subject, field, val) {
     const key = `${subject}_Q${window.currentRecordQuarter || 1}`;
@@ -2216,8 +2382,8 @@ function renderAttendanceView(container, section) {
                                             </td>
                                         `;
         }).join('')}
-                                    <td class="px-2 py-3 text-center bg-green-50/30 font-black text-primary border-l border-gray-100" id="present-${s.lrn}">${attRec.days_present}</td>
-                                    <td class="px-2 py-3 text-center bg-red-50/30 font-black text-red-500 border-l border-gray-100" id="absent-${s.lrn}">${marks.filter(m => m === 'x').length}</td>
+                                    <td class="px-2 py-3 text-center bg-green-50/30 font-black text-primary border-l border-gray-100" id="present-${s.lrn}">${attRec.days_present || 0}</td>
+                                    <td class="px-2 py-3 text-center bg-red-50/30 font-black text-red-500 border-l border-gray-100" id="absent-${s.lrn}">${attRec.school_days ? Math.max(0, attRec.school_days - (attRec.days_present || 0)) : marks.filter(m => m === 'x').length}</td>
                                 </tr>
                             `;
     }).join('')}
@@ -2333,4 +2499,109 @@ async function saveBulkAttendance(section) {
     } catch (e) {
         showMessage("Connection error.", true);
     }
+}
+
+function printReport(title) {
+    const tableDiv = document.querySelector('.excel-table')?.parentElement;
+    if (!tableDiv) {
+        alert("No table found to print.");
+        return;
+    }
+
+    // Prepare print content
+    const printContents = tableDiv.innerHTML;
+    const originalTitle = document.title;
+    
+    // Create an iframe to print from so we don't mess up current document state
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    
+    const doc = iframe.contentWindow.document;
+    
+    // Add tailored styles for print layout
+    doc.write(`
+        <html>
+        <head>
+            <title>${title}</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+                body {
+                    font-family: 'Inter', sans-serif;
+                    padding: 20px;
+                    color: #111827;
+                    font-size: 11px;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    border-bottom: 2px solid #166534;
+                    padding-bottom: 10px;
+                }
+                h1 { margin: 0; font-size: 18px; color: #166534; }
+                p { margin: 2px 0; color: #4b5563; }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 10px;
+                }
+                th, td {
+                    border: 1px solid #d1d5db;
+                    padding: 4px 6px;
+                    text-align: center;
+                }
+                th {
+                    background-color: #f3f4f6 !important;
+                    font-weight: bold;
+                    color: #374151;
+                }
+                .text-left { text-align: left; }
+                input.excel-input {
+                    border: none;
+                    background: transparent;
+                    width: 100%;
+                    text-align: center;
+                    font-weight: bold;
+                    pointer-events: none;
+                }
+                button { display: none !important; } /* hide all buttons in print */
+                @media print {
+                    body {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>AI-Driven Student Evaluation System</h1>
+                <p><strong>${title}</strong></p>
+                <p>Printed on: ${new Date().toLocaleString()}</p>
+            </div>
+            ${printContents}
+            <script>
+                // Map inputs to their values so they render properly in print
+                document.querySelectorAll('input').forEach(el => {
+                    el.setAttribute('value', el.value);
+                    el.outerHTML = '<span>' + (el.value || '') + '</span>';
+                });
+            <\/script>
+        </body>
+        </html>
+    `);
+    
+    doc.close();
+
+    // Give it a moment to render styles securely
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 250);
 }

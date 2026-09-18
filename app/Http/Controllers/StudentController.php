@@ -62,6 +62,7 @@ class StudentController extends Controller
         $validator = Validator::make($request->all(), [
             'lrn'     => 'required|string|max:20|unique:students,lrn',
             'name'    => 'required|string|max:150',
+            'address' => 'nullable|string|max:255',
             'section' => 'nullable|string|max:100',
             'adviser' => 'nullable|string|max:150',
         ]);
@@ -73,6 +74,7 @@ class StudentController extends Controller
         $student = Student::create([
             'lrn'        => $request->lrn,
             'name'       => $request->name,
+            'address'    => $request->address ?? null,
             'section'    => $request->section ?? null,
             'adviser'    => $request->adviser ?? 'Pending Assignment',
             'attendance' => 0,
@@ -339,6 +341,67 @@ class StudentController extends Controller
         }
 
         return response()->json(['error' => 'No file uploaded'], 400);
+    }
+
+    /**
+     * GET /api/students/statistics — Return enrollment stats for dashboards.
+     */
+    public function statistics(Request $request)
+    {
+        $schoolYear = $request->query('school_year', '2025-2026');
+        $students = Student::all();
+
+        $stats = [
+            'total_enrolled' => 0,
+            'by_grade_level' => [
+                'Grade 7' => 0, 'Grade 8' => 0, 'Grade 9' => 0, 
+                'Grade 10' => 0, 'Grade 11' => 0, 'Grade 12' => 0
+            ],
+            'by_section' => []
+        ];
+
+        foreach ($students as $student) {
+            $historyRaw = $student->enrollment_history;
+            $history = is_string($historyRaw) ? json_decode($historyRaw, true) : $historyRaw;
+            
+            $section = null;
+            if (is_array($history)) {
+                $found = collect($history)->firstWhere('school_year', $schoolYear);
+                if ($found) {
+                    $section = $found['section'] ?? null;
+                }
+            }
+            if (!$section && $schoolYear === '2025-2026') {
+                $section = $student->section; // Fallback to current section if active year
+            }
+
+            if ($section) {
+                $stats['total_enrolled']++;
+                
+                // Approximate grade level from section
+                $grade = 'Other';
+                if (preg_match('/Grade (\d+)/i', $section, $m) || preg_match('/Gr (\d+)/i', $section, $m)) {
+                    $grade = 'Grade ' . $m[1];
+                } elseif (preg_match('/STEM|HUMSS|ABM|GAS|TVL|ICT/i', $section)) {
+                    $grade = 'Grade 11/12'; // General fallback
+                    if (str_contains(strtolower($section), '11')) $grade = 'Grade 11';
+                    if (str_contains(strtolower($section), '12')) $grade = 'Grade 12';
+                }
+                
+                if (isset($stats['by_grade_level'][$grade])) {
+                    $stats['by_grade_level'][$grade]++;
+                } else {
+                    $stats['by_grade_level'][$grade] = 1;
+                }
+
+                if (!isset($stats['by_section'][$section])) {
+                    $stats['by_section'][$section] = 0;
+                }
+                $stats['by_section'][$section]++;
+            }
+        }
+
+        return response()->json($stats);
     }
 
     /** Build a safe JSON payload for a logged-in student. */
