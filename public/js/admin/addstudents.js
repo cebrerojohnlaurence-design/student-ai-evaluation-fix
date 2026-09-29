@@ -148,7 +148,11 @@ async function manualAdd(e) {
         const data = await res.json();
 
         if (!res.ok) {
-            showMessage(data.error || 'Failed to save student.', true);
+            let errMsg = data.error || data.message || 'Failed to save student. Server returned: ' + res.status;
+            if (data.exception) {
+                errMsg += ' - ' + data.exception;
+            }
+            showMessage(errMsg, true);
             return;
         }
 
