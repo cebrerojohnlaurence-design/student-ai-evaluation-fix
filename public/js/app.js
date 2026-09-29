@@ -52,6 +52,7 @@ async function fetchSettings() {
                     window.currentRecordSchoolYear = '2025-2026';
                 }
             }
+        }
     } catch (e) {
         console.error('Failed to fetch settings', e);
     }
