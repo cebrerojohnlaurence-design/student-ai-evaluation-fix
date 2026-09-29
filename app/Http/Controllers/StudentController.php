@@ -80,18 +80,22 @@ class StudentController extends Controller
             ];
         }
 
-        $student = Student::create([
-            'lrn'                => $request->lrn,
-            'name'               => $request->name,
-            'address'            => $request->address ?? null,
-            'section'            => $request->section ?? null,
-            'adviser'            => $request->adviser ?? 'Pending Assignment',
-            'attendance'         => 0,
-            'status'             => 'Active',
-            'gwa'                => 0,
-            'risk'               => 'Pending',
-            'enrollment_history' => $history,
-        ]);
+        try {
+            $student = Student::create([
+                'lrn'                => $request->lrn,
+                'name'               => $request->name,
+                'address'            => $request->address ?? null,
+                'section'            => $request->section ?? null,
+                'adviser'            => $request->adviser ?? 'Pending Assignment',
+                'attendance'         => 0,
+                'status'             => 'Active',
+                'gwa'                => 0,
+                'risk'               => 'Pending',
+                'enrollment_history' => $history,
+            ]);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Database Insert Error: ' . $e->getMessage()], 500);
+        }
 
         return response()->json($student, 201);
     }
