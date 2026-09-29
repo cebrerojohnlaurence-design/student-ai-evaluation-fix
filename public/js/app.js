@@ -2081,7 +2081,7 @@ async function loadAcademicReport() {
     let attTotalPresent = 0;
 
     const attendanceRows = ATT_MONTHS.map(m => {
-        const rec = attRecords.find(r => r.month === m.m && r.school_year === sy) || { school_days: m.d, days_present: m.d };
+        const rec = attRecords.find(r => r.month === m.m && r.school_year === sy) || { school_days: 0, days_present: 0 };
         attTotalSchool += rec.school_days;
         attTotalPresent += rec.days_present;
         return `
@@ -2587,7 +2587,7 @@ function renderAttendanceTable(existingRecords) {
 
     const rows = ATT_MONTHS.map(monthObj => {
         const month = monthObj.m;
-        const rec = existingRecords.find(r => r.month === month && r.school_year === sy) || { school_days: monthObj.d, days_present: '' };
+        const rec = existingRecords.find(r => r.month === month && r.school_year === sy) || { school_days: 0, days_present: '' };
 
         return `
             <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition" id="att-row-${month}">

@@ -2548,6 +2548,7 @@ async function saveBulkAttendance(section) {
 
         if (res.ok) {
             showMessage("Daily attendance sheet saved successfully!");
+            if (typeof fetchedAttendanceSections !== 'undefined') fetchedAttendanceSections.delete(section);
             await initAppData();
             renderRecords(document.getElementById('content-area'));
         } else {
