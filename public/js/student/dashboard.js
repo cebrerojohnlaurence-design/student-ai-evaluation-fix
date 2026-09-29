@@ -392,16 +392,26 @@ async function renderEnrolledGrades() {
                 const yearlyAtt = syTarget ? attData.filter(a => a.school_year === syTarget) : attData;
 
                 yearlyAtt.forEach(row => {
-                    if (row.marks && Array.isArray(row.marks)) {
-                        row.marks.forEach(m => {
-                            if (m === '/') presentMarks++;
-                            if (m !== '') totalMarks++;
-                        });
+                    if (row.school_days && row.school_days > 0) {
+                        totalMarks += parseInt(row.school_days) || 0;
+                        presentMarks += parseInt(row.days_present) || 0;
+                    } else {
+                        // fallback to parsing daily_marks if school_days is 0 but daily_marks exist
+                        let marks = row.daily_marks || row.marks;
+                        if (typeof marks === 'string') {
+                            try { marks = JSON.parse(marks); } catch(e) {}
+                        }
+                        if (marks && Array.isArray(marks)) {
+                            marks.forEach(m => {
+                                if (m === '/' || (m && m.toLowerCase() === 'p')) presentMarks++;
+                                if (m !== '' && m !== null) totalMarks++;
+                            });
+                        }
                     }
                 });
                 
                 if (totalMarks > 0) {
-                    const pct = ((presentMarks / totalMarks) * 100).toFixed(0);
+                    const pct = ((presentMarks / totalMarks) * 100).toFixed(2);
                     document.getElementById('student-attendance').innerText = pct;
                 } else {
                     document.getElementById('student-attendance').innerText = "--"; 

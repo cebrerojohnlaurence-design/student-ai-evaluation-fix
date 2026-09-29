@@ -29,24 +29,29 @@ async function fetchSettings() {
             
             // 2. Global School Year Select
             const globalSelect = document.getElementById('global-school-year');
-            if (globalSelect && globalSettings.school_years) {
+            if (globalSelect) {
                 try {
-                    let syList = JSON.parse(globalSettings.school_years);
-                    if (Array.isArray(syList) && syList.length > 0) {
-                        let active = globalSettings.active_sy || window.currentRecordSchoolYear || '2025-2026';
-                        // if currentRecordSchoolYear is not in syList, maybe it was set via URL. Let's just render syList.
-                        if (!syList.includes(active)) active = syList[0]; // fallback
-                        
-                        globalSelect.innerHTML = syList.map(sy => `<option value="${sy}" ${sy === active ? 'selected' : ''}>S.Y. ${sy}</option>`).join('');
-                        
-                        // If it changed, we should update currentRecordSchoolYear
-                        if (window.currentRecordSchoolYear !== active) {
-                            window.currentRecordSchoolYear = active;
-                        }
+                    let syList = [];
+                    if (globalSettings.school_years) {
+                        syList = JSON.parse(globalSettings.school_years);
                     }
-                } catch(e){}
+                    if (!Array.isArray(syList) || syList.length === 0) {
+                        syList = ['2025-2026'];
+                    }
+                    
+                    let active = globalSettings.active_sy || window.currentRecordSchoolYear || '2025-2026';
+                    if (!syList.includes(active)) active = syList[0];
+                    
+                    globalSelect.innerHTML = syList.map(sy => `<option value="${sy}" ${sy === active ? 'selected' : ''}>S.Y. ${sy}</option>`).join('');
+                    
+                    if (window.currentRecordSchoolYear !== active) {
+                        window.currentRecordSchoolYear = active;
+                    }
+                } catch(e) {
+                    globalSelect.innerHTML = '<option value="2025-2026">S.Y. 2025-2026</option>';
+                    window.currentRecordSchoolYear = '2025-2026';
+                }
             }
-        }
     } catch (e) {
         console.error('Failed to fetch settings', e);
     }
