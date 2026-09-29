@@ -22,6 +22,11 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        window.APP_API_KEY = "{{ env('GEMINI_API_KEY') }}";
+    </script>
 
     {{-- Tailwind Theme Config --}}
     <script>
@@ -195,15 +200,15 @@
                         class="flex flex-col items-center justify-center gap-3 group-hover:opacity-60 transition"
                     >
                         <i class="fas fa-file-image text-4xl text-gray-300"></i>
-                        <p class="text-xs text-gray-400">Click to upload document image</p>
-                        <p class="text-[10px] text-gray-300">Supports JPG, PNG, WebP</p>
+                        <p class="text-xs text-gray-400">Click to upload document or Excel file</p>
+                        <p class="text-[10px] text-gray-300">Supports JPG, PNG, WebP, XLSX, XLS</p>
                     </div>
                 </div>
                 <input
                     type="file"
                     id="doc-upload"
                     class="hidden"
-                    accept="image/*"
+                    accept="image/*,.xlsx,.xls"
                     onchange="handleDocPreview(this)"
                 />
             </label>

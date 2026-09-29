@@ -258,6 +258,22 @@ function promptAddAdviserSection() {
     overlay.id = 'add-adviser-sec-modal';
     overlay.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in';
 
+    const getGrade = (secName) => {
+        let match = secName.match(/\b([7-9]|1[0-2])\b/);
+        if (match) return 'Grade ' + match[1];
+        try {
+            let saved = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+            let sd = saved.find(x => x.name === secName);
+            if (sd && sd.year) {
+                let m = sd.year.match(/\b([7-9]|1[0-2])\b/);
+                if (m) return 'Grade ' + m[1];
+            }
+        } catch(e){}
+        return 'Unknown';
+    };
+
+    const allAvailableGrades = Array.from(new Set(availableSections.map(s => getGrade(s)).filter(g => g !== 'Unknown'))).sort((a,b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+
     let listHTML = '';
     if (jhsSections.length === 0 && shsSections.length === 0) {
         listHTML = '<div class="p-6 text-center text-gray-400 italic text-sm">No available sections remaining for your assigned level.</div>';
@@ -265,7 +281,7 @@ function promptAddAdviserSection() {
         if (jhsSections.length > 0) {
             listHTML += '<div class="px-4 py-2 border-y border-green-100 text-[10px] font-bold text-primary uppercase tracking-widest bg-green-50 sticky top-0 z-10">Junior High School</div>';
             listHTML += jhsSections.map(sec => `
-                <div onclick="selectAdviserSectionCell(this, '${sec}')" class="adviser-section-option px-5 py-3.5 cursor-pointer hover:bg-green-50 transition border-b border-gray-100 last:border-0 text-sm text-gray-700 font-medium flex justify-between items-center group">
+                <div onclick="selectAdviserSectionCell(this, '${sec}')" data-grade="${getGrade(sec)}" class="adviser-section-option px-5 py-3.5 cursor-pointer hover:bg-green-50 transition border-b border-gray-100 last:border-0 text-sm text-gray-700 font-medium flex justify-between items-center group">
                     <span>${sec}</span><i class="fas fa-check text-white group-[.selected]:text-primary transition opacity-0 group-[.selected]:opacity-100"></i>
                 </div>
             `).join('');
@@ -273,7 +289,7 @@ function promptAddAdviserSection() {
         if (shsSections.length > 0) {
             listHTML += '<div class="px-4 py-2 border-y border-blue-100 text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 sticky top-0 z-10">Senior High School</div>';
             listHTML += shsSections.map(sec => `
-                <div onclick="selectAdviserSectionCell(this, '${sec}')" class="adviser-section-option px-5 py-3.5 cursor-pointer hover:bg-blue-50 transition border-b border-gray-100 last:border-0 text-sm text-gray-700 font-medium flex justify-between items-center group">
+                <div onclick="selectAdviserSectionCell(this, '${sec}')" data-grade="${getGrade(sec)}" class="adviser-section-option px-5 py-3.5 cursor-pointer hover:bg-blue-50 transition border-b border-gray-100 last:border-0 text-sm text-gray-700 font-medium flex justify-between items-center group">
                     <span>${sec}</span><i class="fas fa-check text-white group-[.selected]:text-blue-600 transition opacity-0 group-[.selected]:opacity-100"></i>
                 </div>
             `).join('');
@@ -287,9 +303,18 @@ function promptAddAdviserSection() {
                 <p class="text-xs text-gray-400 leading-relaxed">Search and choose a section to act as their Adviser.</p>
             </div>
             
-            <div class="shrink-0 mb-4 relative">
-                <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
-                <input type="text" id="search-adviser-section" placeholder="Search sections..." class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition" onkeyup="filterAdviserSections(this.value)">
+            <div class="shrink-0 mb-4 flex gap-2">
+                <div class="w-1/3 relative">
+                    <select id="adviser-grade-filter" onchange="filterAdviserSections()" class="w-full pl-3 pr-8 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition appearance-none">
+                        <option value="All">All Grades</option>
+                        ${allAvailableGrades.map(g => `<option value="${g}">${g}</option>`).join('')}
+                    </select>
+                    <i class="fas fa-chevron-down absolute right-3 top-4 text-[10px] text-gray-400 pointer-events-none"></i>
+                </div>
+                <div class="w-2/3 relative">
+                    <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
+                    <input type="text" id="search-adviser-section" placeholder="Search sections..." class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition" onkeyup="filterAdviserSections()">
+                </div>
             </div>
             
             <div class="flex-1 overflow-y-auto mb-6 bg-white border border-gray-200 rounded-xl relative shadow-inner h-64 select-none">
@@ -316,15 +341,23 @@ function promptAddAdviserSection() {
         document.getElementById('confirm-add-adviser-sec').disabled = false;
     };
 
-    window.filterAdviserSections = function (query) {
-        const q = query.toLowerCase();
-        let anyVisible = false;
+    window.filterAdviserSections = function () {
+        const queryEl = document.getElementById('search-adviser-section');
+        const filterEl = document.getElementById('adviser-grade-filter');
+        if (!queryEl || !filterEl) return;
+        const q = queryEl.value.toLowerCase();
+        const f = filterEl.value;
+
         document.querySelectorAll('.adviser-section-option').forEach(el => {
             const text = el.innerText.toLowerCase();
-            if (text.includes(q)) {
+            const g = el.getAttribute('data-grade');
+            
+            const matchQ = text.includes(q);
+            const matchF = (f === 'All' || g === f);
+
+            if (matchQ && matchF) {
                 el.classList.remove('hidden');
                 el.classList.add('flex');
-                anyVisible = true;
             } else {
                 el.classList.add('hidden');
                 el.classList.remove('flex');
@@ -638,7 +671,7 @@ function getTeacherSections(t) {
     if (subjects.length === 0) return [];
     const sections = new Set();
     students.forEach(s => {
-        if (s.subjects && s.subjects.some(sub => subjects.includes(sub.n))) {
+        if (s.section && s.section !== 'null' && s.subjects && s.subjects.some(sub => subjects.includes(sub.n))) {
             sections.add(s.section);
         }
     });
@@ -800,12 +833,109 @@ function switchRecordsTab(tab) {
 // ─────────────────────────────────────────────────────────────────────────────
 // STUDENTS ANALYTICS VIEW
 // ─────────────────────────────────────────────────────────────────────────────
-function renderAdminStudentsAnalytics(container) {
-    // ── Filter students based on level + grade/strand selection ──
-    const jhGrades = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'];
-    const shGrades = ['Grade 11', 'Grade 12'];
+window.studentsAnalyticsGrade = window.studentsAnalyticsGrade || 'all';
+window.studentsAnalyticsSection = window.studentsAnalyticsSection || 'all';
+window.studentsAnalyticsSelectedLRN = window.studentsAnalyticsSelectedLRN || null;
+window.studentsAnalyticsSearch = window.studentsAnalyticsSearch || '';
 
-    // Detect which grade a student belongs to from their section name
+window.toggleStudentMgmtFilters = function() {
+    const pop = document.getElementById('student-mgmt-filters-popover');
+    if(pop) pop.classList.toggle('hidden');
+};
+
+window.filterStudentMgmtList = function(val) {
+    window.studentsAnalyticsSearch = val.toLowerCase();
+    const rows = document.querySelectorAll('.student-mgmt-row');
+    rows.forEach(row => {
+        const name = row.getAttribute('data-name');
+        if(name.includes(window.studentsAnalyticsSearch)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+};
+
+window.selectStudentMgmtProfile = function(lrn) {
+    const sel = students.find(s => s.lrn === lrn);
+    if (!sel) return;
+    
+    // Determine Level
+    let gLevel = 'Unknown Level';
+    const sName = (sel.section || '').toLowerCase();
+    if (sName.match(/\b12\b/) || sName.startsWith('12')) gLevel = 'Grade 12';
+    else if (sName.match(/\b11\b/) || sName.startsWith('11')) gLevel = 'Grade 11';
+    else if (sName.match(/\b10\b/) || sName.startsWith('10')) gLevel = 'Grade 10';
+    else if (sName.match(/\b9\b/) || sName.startsWith('9-')) gLevel = 'Grade 9';
+    else if (sName.match(/\b8\b/) || sName.startsWith('8-')) gLevel = 'Grade 8';
+    else if (sName.match(/\b7\b/) || sName.startsWith('7-')) gLevel = 'Grade 7';
+    else {
+        try {
+            const savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+            const secData = savedSections.find(x => x.name.toLowerCase() === sName);
+            if (secData && secData.year) {
+                let m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
+                if (m2) gLevel = 'Grade ' + m2[1];
+            }
+        } catch(e) {}
+    }
+    
+    let advName = 'None';
+    if (typeof teachers !== 'undefined') {
+        const adv = teachers.find(t => t.is_adviser && (t.section || '').toLowerCase().includes(sName));
+        if(adv) advName = adv.name;
+    }
+    
+    const photo = sel.photo || 'https://ui-avatars.com/api/?name='+encodeURIComponent(sel.name)+'&size=120&background=166534&color=fff';
+    
+    Swal.fire({
+        html: `
+            <div class="text-left relative overflow-hidden bg-white p-2">
+                <div class="absolute -right-10 -bottom-10 opacity-5 pointer-events-none">
+                    <i class="fas fa-user-graduate text-[150px]"></i>
+                </div>
+                <div class="flex flex-col md:flex-row gap-6 relative z-10 items-center md:items-start">
+                    <img src="${photo}" class="w-24 h-24 rounded-2xl object-cover border-4 border-green-50 shadow-sm shrink-0">
+                    <div class="flex-1 w-full">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-2xl font-black text-gray-800">${sel.name}</h3>
+                                <p class="text-sm text-gray-500 font-bold mt-1">${sel.lrn} • ${sel.email || 'No email provided'}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mt-6">
+                            <div>
+                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Level</p>
+                                <p class="text-sm font-bold text-gray-800">${gLevel}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Location</p>
+                                <p class="text-sm font-bold text-gray-800"><i class="fas fa-map-marker-alt text-gray-300 mr-1"></i> ${sel.section || 'Unassigned'}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Adviser</p>
+                                <p class="text-sm font-bold text-gray-800 truncate">${advName}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">General Average</p>
+                                <p class="text-sm font-bold ${sel.gwa >= 90 ? 'text-yellow-600' : sel.gwa >= 75 ? 'text-green-600' : 'text-red-500'}">${sel.gwa > 0 ? sel.gwa.toFixed(2) : 'No Grades'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: {
+            popup: 'rounded-3xl p-4'
+        },
+        width: '600px'
+    });
+};
+
+function renderAdminStudentsAnalytics(container) {
+    // 1. Determine all unique grades and sections
     function guessGradeFromSection(sec) {
         const s = (sec || '').toLowerCase();
         if (s.match(/\b12\b/) || s.startsWith('12')) return 'Grade 12';
@@ -815,6 +945,15 @@ function renderAdminStudentsAnalytics(container) {
         if (s.match(/\b8\b/) || s.startsWith('8-')) return 'Grade 8';
         if (s.match(/\b7\b/) || s.startsWith('7-')) return 'Grade 7';
         
+        try {
+            const savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+            const secData = savedSections.find(x => x.name.toLowerCase() === s);
+            if (secData && secData.year) {
+                let m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
+                if (m2) return 'Grade ' + m2[1];
+            }
+        } catch(e) {}
+        
         if (typeof teachers !== 'undefined') {
             const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s));
             if (adv) {
@@ -822,117 +961,92 @@ function renderAdminStudentsAnalytics(container) {
                 if (adv.level === 'JH') return 'Grade 7';
             }
         }
-        
-        return null;
+        return 'Unknown Level';
     }
 
-    function getFilteredStudents() {
-        let pool = students.filter(s => s.section); // must be assigned to a section
-        if (studentsAnalyticsLevel === 'JH') {
-            pool = pool.filter(s => {
-                const g = guessGradeFromSection(s.section);
-                return jhGrades.includes(g);
-            });
-            if (studentsAnalyticsGrade !== 'all') {
-                pool = pool.filter(s => guessGradeFromSection(s.section) === studentsAnalyticsGrade);
-            }
-        } else if (studentsAnalyticsLevel === 'SH') {
-            pool = pool.filter(s => {
-                const g = guessGradeFromSection(s.section);
-                return shGrades.includes(g);
-            });
-            if (studentsAnalyticsGrade !== 'all') {
-                pool = pool.filter(s => guessGradeFromSection(s.section) === studentsAnalyticsGrade);
-            }
-        }
-        return pool;
-    }
-
-    const filtered = getFilteredStudents();
-    const withGrades = filtered.filter(s => s.gwa > 0);
-    const avgGwa = withGrades.length ? (withGrades.reduce((sum, s) => sum + s.gwa, 0) / withGrades.length).toFixed(2) : '--';
-    const honors = withGrades.filter(s => {
-        const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
-        return s.gwa >= 90 && !hasFailing;
-    }).length;
-    const passing = withGrades.filter(s => s.gwa >= 75 && s.gwa < 90).length;
-    const atRisk = withGrades.filter(s => s.gwa > 0 && s.gwa < 75).length;
-
-    // ── Build grade/strand sub-filter pills ──
-    let subFilterHtml = '';
-    if (studentsAnalyticsLevel === 'JH') {
-        subFilterHtml = '<div class="flex flex-wrap gap-2">' +
-            [{ v: 'all', l: 'All JH' }, ...jhGrades.map(g => ({ v: g, l: g }))].map(opt => {
-                const active = studentsAnalyticsGrade === opt.v;
-                return '<button onclick="setStudentsGradeFilter(\'' + opt.v + '\')" class="px-3 py-1.5 rounded-full text-xs font-bold border transition ' +
-                    (active ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary') + '">' + opt.l + '</button>';
-            }).join('') +
-            '</div>';
-    } else if (studentsAnalyticsLevel === 'SH') {
-        subFilterHtml = '<div class="flex flex-wrap gap-2">' +
-            [{ v: 'all', l: 'All SH' }, ...shGrades.map(g => ({ v: g, l: g }))].map(opt => {
-                const active = studentsAnalyticsGrade === opt.v;
-                return '<button onclick="setStudentsGradeFilter(\'' + opt.v + '\')" class="px-3 py-1.5 rounded-full text-xs font-bold border transition ' +
-                    (active ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary') + '">' + opt.l + '</button>';
-            }).join('') +
-            '</div>';
-    }
-
-    // ── Section breakdown (for chart) ──
-    const sectionMap = {};
-    filtered.forEach(s => {
-        if (!s.section) return;
-        if (!sectionMap[s.section]) sectionMap[s.section] = { total: 0, withGwa: 0, gwaSum: 0, honor: 0, atRisk: 0 };
-        sectionMap[s.section].total++;
-        if (s.gwa > 0) {
-            sectionMap[s.section].withGwa++;
-            sectionMap[s.section].gwaSum += s.gwa;
-            const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
-            if (s.gwa >= 90 && !hasFailing) sectionMap[s.section].honor++;
-            if (s.gwa < 75) sectionMap[s.section].atRisk++;
+    let allGrades = new Set();
+    let allSections = new Set();
+    
+    students.forEach(s => {
+        if(s.section) {
+            allSections.add(s.section);
+            allGrades.add(guessGradeFromSection(s.section));
         }
     });
-    const secLabels = Object.keys(sectionMap).sort();
-    const secAvgGwa = secLabels.map(sec => sectionMap[sec].withGwa ? (sectionMap[sec].gwaSum / sectionMap[sec].withGwa).toFixed(1) : 0);
-    const secHonors = secLabels.map(sec => sectionMap[sec].honor);
-    const secAtRisk = secLabels.map(sec => sectionMap[sec].atRisk);
+    allGrades = Array.from(allGrades).sort();
+    allSections = Array.from(allSections).sort();
 
-    // ── Student list (alphabetical order) ──
-    const listStudents = [...withGrades].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 10);
+    // 2. Filter students
+    let filtered = students.filter(s => s.section);
+    if (window.studentsAnalyticsGrade !== 'all') {
+        filtered = filtered.filter(s => guessGradeFromSection(s.section) === window.studentsAnalyticsGrade);
+    }
+    if (window.studentsAnalyticsSection !== 'all') {
+        filtered = filtered.filter(s => s.section === window.studentsAnalyticsSection);
+    }
 
-    const studentListHtml = listStudents.length === 0
-        ? '<p class="text-gray-400 italic text-sm text-center py-6">No graded students in this selection.</p>'
-        : listStudents.map((s, i) => {
-            const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
-            const isStudentHonors = s.gwa >= 90 && !hasFailing;
-            const badge = isStudentHonors ? '<span class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[9px] font-bold">With Honors</span>'
-                : s.gwa < 75 ? '<span class="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[9px] font-bold">At Risk</span>' : '';
-            const gwaColor = s.gwa >= 90 ? 'text-yellow-600' : s.gwa < 75 ? 'text-red-500' : 'text-green-600';
-            return '<div class="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-b-0">' +
-                '<span class="text-[10px] font-bold text-gray-300 w-5 text-right shrink-0">' + (i + 1) + '</span>' +
-                '<div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-green-800 flex items-center justify-center text-white text-[10px] font-bold shrink-0">' +
-                s.name.split(',')[0].trim().charAt(0) + (s.name.split(' ').pop().charAt(0) || '') +
-                '</div>' +
-                '<div class="flex-1 min-w-0">' +
-                '<p class="text-sm font-bold text-gray-800 truncate">' + s.name + '</p>' +
-                '<p class="text-[10px] text-gray-400">' + (s.section || '—') + ' ' + badge + '</p>' +
-                '</div>' +
-                '<span class="text-sm font-bold ' + gwaColor + ' shrink-0">' + s.gwa.toFixed(1) + '</span>' +
-                '</div>';
-        }).join('');
+    // 3. Render Profile Summary
+    // 4. Render Table Rows
+    const studentRowsHtml = filtered.sort((a,b) => a.name.localeCompare(b.name)).map(s => {
+        const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+        let statusText = 'Pending';
+        let statusColor = 'bg-gray-100 text-gray-500';
+        let barColor = 'bg-gray-300';
+        let progress = 0;
+        
+        if (s.gwa > 0) {
+            progress = s.gwa;
+            if (s.gwa >= 90 && !hasFailing) {
+                statusText = 'Excellent';
+                statusColor = 'bg-emerald-100 text-emerald-700';
+                barColor = 'bg-emerald-500';
+            } else if (s.gwa >= 75) {
+                statusText = 'Passing';
+                statusColor = 'bg-blue-100 text-blue-700';
+                barColor = 'bg-blue-500';
+            } else {
+                statusText = 'At Risk';
+                statusColor = 'bg-red-100 text-red-700';
+                barColor = 'bg-red-500';
+            }
+        }
+        
+        const isSelected = window.studentsAnalyticsSelectedLRN === s.lrn;
+        const rowClass = 'hover:bg-gray-50 cursor-pointer';
 
-    const levelBtns2 = [
-        { v: 'ALL', l: 'All Students' },
-        { v: 'JH', l: 'Junior High' },
-        { v: 'SH', l: 'Senior High' },
-    ].map(opt => {
-        const active = studentsAnalyticsLevel === opt.v;
-        return '<button onclick="setStudentsLevelFilter(\'' + opt.v + '\')" class="px-4 py-2 rounded-xl text-sm font-bold border-2 transition ' +
-            (active ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary') + '">' + opt.l + '</button>';
+        return `
+        <tr class="${rowClass} transition-colors student-mgmt-row" data-name="${s.name.toLowerCase()}" onclick="selectStudentMgmtProfile('${s.lrn}')">
+            <td class="py-3 px-2 text-center" onclick="event.stopPropagation()">
+                <input type="checkbox" class="rounded border-gray-300 accent-primary w-4 h-4 mt-1 cursor-pointer">
+            </td>
+            <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                    <img src="${s.photo || 'https://ui-avatars.com/api/?name='+encodeURIComponent(s.name)+'&background=f3f4f6&color=6b7280'}" class="w-8 h-8 rounded-full object-cover">
+                    <div>
+                        <p class="font-bold text-gray-800 leading-tight">${s.name}</p>
+                        <p class="text-[10px] text-gray-400">${s.lrn}</p>
+                    </div>
+                </div>
+            </td>
+            <td class="py-3 px-4 text-gray-600 font-medium">${s.section}</td>
+            <td class="py-3 px-4 text-gray-600 font-medium">${guessGradeFromSection(s.section)}</td>
+            <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-16 px-2 py-0.5 rounded text-[10px] font-bold text-center ${statusColor} uppercase tracking-wider">${statusText}</span>
+                    <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden min-w-[80px]">
+                        <div class="h-full ${barColor} rounded-full" style="width: ${progress}%"></div>
+                    </div>
+                    <span class="text-xs font-bold text-gray-600 w-8">${s.gwa > 0 ? s.gwa.toFixed(1) : '-'}</span>
+                </div>
+            </td>
+            <td class="py-3 px-4 text-center">
+                <button class="text-gray-400 hover:text-primary transition p-1"><i class="fas fa-ellipsis-v"></i></button>
+            </td>
+        </tr>`;
     }).join('');
 
     const tabBtns = `
-            <div class="flex gap-1 bg-gray-100 rounded-2xl p-1">
+        <div class="flex gap-1 bg-gray-100 rounded-2xl p-1 shrink-0">
             <button onclick="switchRecordsTab('teachers')" class="px-5 py-2 rounded-xl text-sm font-bold transition text-gray-500 hover:text-primary">
                 <i class="fas fa-chalkboard-teacher mr-1.5"></i>Teachers
             </button>
@@ -942,256 +1056,101 @@ function renderAdminStudentsAnalytics(container) {
         </div> `;
 
     container.innerHTML = `
-            <div class="flex flex-col gap-6 animate-slide-up">
-            <!--Header + tabs-->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800">Students Analytics</h2>
-                    <p class="text-sm text-gray-400 mt-1">View student performance across levels and grade groups.</p>
-                </div>
-                <div class="flex flex-col items-end gap-3">
-                    ${tabBtns}
-                    <!-- Level toggle -->
-                    <div class="flex gap-2 flex-wrap">${levelBtns2}</div>
-                    <!-- Grade/strand sub-filter -->
-                    ${subFilterHtml}
-                </div>
+    <div class="flex flex-col gap-6 animate-slide-up h-full pb-10">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h2 class="text-2xl font-black text-gray-800 tracking-tight">Student Management</h2>
+                <p class="text-sm text-gray-400 font-medium mt-1">Manage your student information and view academic records.</p>
             </div>
-
-            <!--Summary stat cards-->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Students</p>
-                    <p class="text-3xl font-black text-gray-800 mt-1">${filtered.length}</p>
-                    <p class="text-[10px] text-gray-400 mt-1">${withGrades.length} with grades</p>
-                </div>
-                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Average GWA</p>
-                    <p class="text-3xl font-black ${parseFloat(avgGwa) >= 90 ? 'text-yellow-500' : parseFloat(avgGwa) >= 75 ? 'text-green-600' : 'text-red-500'} mt-1">${avgGwa}</p>
-                    <p class="text-[10px] text-gray-400 mt-1">across graded students</p>
-                </div>
-                <div class="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-2xl p-5 border border-yellow-100 shadow-sm">
-                    <p class="text-[10px] font-bold text-yellow-600 uppercase tracking-wider">With Honors</p>
-                    <p class="text-3xl font-black text-yellow-600 mt-1">${honors}</p>
-                    <p class="text-[10px] text-yellow-500 mt-1">GWA ≥ 90</p>
-                </div>
-                <div class="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl p-5 border border-red-100 shadow-sm">
-                    <p class="text-[10px] font-bold text-red-400 uppercase tracking-wider">At Risk</p>
-                    <p class="text-3xl font-black text-red-500 mt-1">${atRisk}</p>
-                    <p class="text-[10px] text-red-400 mt-1">GWA &lt; 75</p>
-                </div>
-            </div>
-
-            <!--Charts row-->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <!-- Bar chart: Avg GWA per section -->
-                <div class="lg:col-span-2 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <p class="text-sm font-bold text-gray-700 mb-4"><i class="fas fa-chart-bar mr-2 text-primary"></i>Average GWA by Section</p>
-                    <div class="relative h-52">
-                        <canvas id="chart-gwa-by-section"></canvas>
-                    </div>
-                </div>
-                <!-- Pie chart: Performance distribution -->
-                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <p class="text-sm font-bold text-gray-700 mb-4"><i class="fas fa-chart-pie mr-2 text-primary"></i>Performance Distribution</p>
-                    <div class="relative h-52">
-                        <canvas id="chart-performance-dist"></canvas>
-                    </div>
-                    <div class="flex flex-wrap gap-3 justify-center mt-3 text-[10px] font-bold">
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span> Honors (≥90): ${honors}</span>
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span> Passing: ${passing}</span>
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> At Risk: ${atRisk}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!--Section detail + Student leaderboard-->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <!-- Honors/At-risk per section bar -->
-                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <p class="text-sm font-bold text-gray-700 mb-4"><i class="fas fa-layer-group mr-2 text-primary"></i>Honors & At-Risk by Section</p>
-                    <div class="relative h-52">
-                        <canvas id="chart-honor-risk-by-section"></canvas>
-                    </div>
-                </div>
-                <!-- Top performers -->
-                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm overflow-y-auto max-h-80">
-                    <p class="text-sm font-bold text-gray-700 mb-3"><i class="fas fa-trophy mr-2 text-yellow-500"></i>Top Performers (GWA)</p>
-                    ${studentListHtml}
-                </div>
-            </div>
-
-            <!-- New Section: Full Grading Table -->
-            <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mt-4">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                    <div>
-                        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-table mr-2 text-primary"></i>Master Grading Table</h3>
-                        <p class="text-xs text-gray-400 mt-1">Select a section to view all student grades in detail.</p>
-                    </div>
-                    <div class="w-full md:w-64">
-                        <select onchange="window.studentsAnalyticsSelectedSection = this.value; renderAdminStudentsAnalytics(document.getElementById('content-area'));" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold outline-none focus:border-primary transition">
-                            <option value="">-- Select Section --</option>
-                            ${secLabels.map(sec => `<option value="${sec}" ${window.studentsAnalyticsSelectedSection === sec ? 'selected' : ''}>${sec}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                
-                <div id="analytics-grading-table-container" class="overflow-x-auto w-full rounded-xl border border-gray-100 bg-gray-50/50">
-                    <!-- Table will be rendered here if a section is selected -->
-                </div>
+            <div class="flex flex-col items-end gap-3">
+                ${tabBtns}
             </div>
         </div>
-            `;
 
-    // ── Render charts with Chart.js ──
-    setTimeout(() => {
-        // Chart 1: Avg GWA by section (horizontal bar)
-        const ctx1 = document.getElementById('chart-gwa-by-section');
-        if (ctx1) {
-            if (ctx1._chart) ctx1._chart.destroy();
-            ctx1._chart = new Chart(ctx1, {
-                type: 'bar',
-                data: {
-                    labels: secLabels.length ? secLabels : ['No data'],
-                    datasets: [{
-                        label: 'Avg GWA',
-                        data: secLabels.length ? secAvgGwa : [0],
-                        backgroundColor: secAvgGwa.map(v => parseFloat(v) >= 90 ? 'rgba(234,179,8,0.75)' : parseFloat(v) >= 75 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)'),
-                        borderRadius: 6,
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { min: 60, max: 100, ticks: { font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
-                        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
-                    }
-                }
-            });
-        }
-
-        // Chart 2: Pie – performance distribution
-        const ctx2 = document.getElementById('chart-performance-dist');
-        if (ctx2) {
-            if (ctx2._chart) ctx2._chart.destroy();
-            ctx2._chart = new Chart(ctx2, {
-                type: 'doughnut',
-                data: {
-                    labels: ['With Honors (≥90)', 'Passing (75-89)', 'At Risk (<75)', 'No Grades'],
-                    datasets: [{
-                        data: [honors, passing, atRisk, filtered.length - withGrades.length],
-                        backgroundColor: ['rgba(234,179,8,0.85)', 'rgba(34,197,94,0.85)', 'rgba(239,68,68,0.85)', 'rgba(156,163,175,0.5)'],
-                        borderWidth: 2, borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    cutout: '60%'
-                }
-            });
-        }
-
-        // Chart 3: Grouped bar – honors vs at-risk per section
-        const ctx3 = document.getElementById('chart-honor-risk-by-section');
-        if (ctx3) {
-            if (ctx3._chart) ctx3._chart.destroy();
-            ctx3._chart = new Chart(ctx3, {
-                type: 'bar',
-                data: {
-                    labels: secLabels.length ? secLabels : ['No data'],
-                    datasets: [
-                        { label: 'With Honors', data: secLabels.length ? secHonors : [0], backgroundColor: 'rgba(234,179,8,0.75)', borderRadius: 5 },
-                        { label: 'At Risk', data: secLabels.length ? secAtRisk : [0], backgroundColor: 'rgba(239,68,68,0.75)', borderRadius: 5 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 12 } } },
-                    scales: {
-                        y: { ticks: { font: { size: 10 }, stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.04)' } },
-                        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
-                    }
-                }
-            });
-        }
         
-        // Render Master Grading Table if a section is selected
-        const tableContainer = document.getElementById('analytics-grading-table-container');
-        if (tableContainer) {
-            if (window.studentsAnalyticsSelectedSection) {
-                const secStr = window.studentsAnalyticsSelectedSection;
-                let secStudents = students.filter(s => s.section === secStr);
-                const subjectHeaders = coreSubjects.map(sub => '<th class="static-cell text-gray-600">' + sub + '</th>').join('');
-                
-                const rows = secStudents.length === 0
-                    ? '<tr><td colspan="30" class="py-12 text-center text-gray-400 italic">No students found.</td></tr>'
-                    : secStudents.map(s => {
-                        const subCols = coreSubjects.map(subName => {
-                            const subData = s.subjects && s.subjects.find(x => x.n === subName);
-                            let grade = subData && subData.g !== null && subData.g !== undefined ? subData.g : '-';
-                            const color = (grade !== '-' && grade < 75) ? 'text-red-500 font-bold' : 'text-gray-700';
-                            return '<td class="static-cell ' + color + '">' + grade + '</td>';
-                        }).join('');
 
-                        let displayGWA = s.gwa > 0 ? s.gwa : '-';
-                        let badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-gray-100 text-gray-500">No Grades</span>';
-                        const gwaVal = parseFloat(displayGWA);
-                        if (!isNaN(gwaVal)) {
-                            const isSH = window.currentRecordGradeLevel >= 11;
-                            const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
-                            if (isSH) {
-                                if (gwaVal >= 90 && !hasFailing) {
-                                    badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Academic Excellence Award</span>';
-                                } else if (gwaVal >= 75) {
-                                    badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
-                                } else if (gwaVal > 0) {
-                                    badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
-                                }
-                            } else {
-                                if (gwaVal >= 98 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Highest Honor</span>';
-                                else if (gwaVal >= 95 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 font-bold">High Honor</span>';
-                                else if (gwaVal >= 90 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 font-bold">With Honor</span>';
-                                else if (gwaVal >= 75) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
-                                else if (gwaVal > 0) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
-                            }
-                        }
+        <!-- Student List Section -->
+        <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex-1 flex flex-col min-h-[500px]">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4 relative z-20">
+                <div class="flex items-center gap-3">
+                    <h3 class="text-lg font-black text-gray-800">Students</h3>
+                    <span class="text-primary font-bold bg-green-50 px-2 py-0.5 rounded text-sm">${filtered.length}</span>
+                </div>
+                <div class="flex items-center gap-3 w-full lg:w-auto relative">
+                    <div class="relative flex-1 lg:w-64">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                        <input type="text" id="student-mgmt-search" placeholder="Search Students..." value="${window.studentsAnalyticsSearch}" onkeyup="filterStudentMgmtList(this.value)" class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 outline-none focus:border-primary transition bg-gray-50/50">
+                    </div>
+                    
+                    <!-- Filters dropdown trigger -->
+                    <div class="relative" id="student-mgmt-filters-container">
+                        <button onclick="toggleStudentMgmtFilters()" class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition active:scale-95">
+                            <i class="fas fa-filter text-gray-400"></i> Filters
+                        </button>
+                        <!-- Popover -->
+                        <div id="student-mgmt-filters-popover" class="hidden absolute right-0 top-full mt-2 w-72 bg-white border border-gray-100 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] rounded-2xl p-5 z-50 animate-scale-up origin-top-right">
+                            <h4 class="font-black text-gray-800 mb-4 text-sm">Filter by</h4>
+                            
+                            <div class="mb-4">
+                                <label class="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Class / Level</label>
+                                <select onchange="window.studentsAnalyticsGrade = this.value;" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 outline-none focus:border-primary bg-gray-50/50">
+                                    <option value="all">All Levels</option>
+                                    ${allGrades.map(g => `<option value="${g}" ${window.studentsAnalyticsGrade === g ? 'selected' : ''}>${g}</option>`).join('')}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <label class="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Location (Section)</label>
+                                <select onchange="window.studentsAnalyticsSection = this.value;" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 outline-none focus:border-primary bg-gray-50/50">
+                                    <option value="all">All Sections</option>
+                                    ${allSections.map(s => `<option value="${s}" ${window.studentsAnalyticsSection === s ? 'selected' : ''}>${s}</option>`).join('')}
+                                </select>
+                            </div>
 
-                        return '<tr class="hover:bg-blue-50/30 transition border-b border-gray-50">' +
-                            '<td class="student-name border-r border-gray-100 font-semibold text-gray-800">' + s.name + '</td>' +
-                            '<td class="static-cell font-mono text-gray-400 text-[10px] border-r border-gray-100">' + s.lrn + '</td>' +
-                            subCols +
-                            '<td class="static-cell font-bold text-primary bg-blue-50/30 border-l-2 border-blue-200">' + displayGWA + '</td>' +
-                            '<td class="static-cell">' + (s.attendance > 0 ? s.attendance + '%' : '-') + '</td>' +
-                            '<td class="static-cell">' + badge + '</td>' +
-                            '<td class="static-cell flex gap-2">' +
-                            `<button onclick="if(typeof showReport === 'function'){showReport(students.find(x => x.lrn === '${s.lrn}'))}" class="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-100 transition border border-blue-100"><i class="fas fa-print"></i></button>` +
-                            '</td>' +
-                            '</tr>';
-                    }).join('');
-                
-                tableContainer.innerHTML = `<table class="w-full excel-table border-collapse min-w-[600px]">
-                        <thead>
-                            <tr>
-                                <th class="w-48 text-left static-cell">Full Name</th>
-                                <th class="static-cell">LRN</th>
-                                ${subjectHeaders}
-                                <th class="bg-blue-50 text-blue-800 border-b-2 border-blue-200 static-cell">GWA</th>
-                                <th class="static-cell">Att %</th>
-                                <th class="static-cell">Status</th>
-                                <th class="static-cell">Report</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>`;
-            } else {
-                tableContainer.innerHTML = '<div class="py-12 text-center text-gray-400 italic">Please select a section from the dropdown above to view the detailed grading table.</div>';
-            }
-        }
-    }, 100);
+                            <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                                <button onclick="window.studentsAnalyticsGrade='all'; window.studentsAnalyticsSection='all'; renderAdminStudentsAnalytics(document.getElementById('content-area'));" class="px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition">Reset</button>
+                                <button onclick="renderAdminStudentsAnalytics(document.getElementById('content-area'))" class="px-5 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-sm hover:bg-primaryDark transition active:scale-95">Apply</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table / List -->
+            <div class="overflow-x-auto flex-1 border border-gray-100 rounded-xl relative z-10">
+                <table class="w-full text-left whitespace-nowrap">
+                    <thead class="text-xs font-bold text-gray-400 border-b border-gray-100 bg-gray-50/50">
+                        <tr>
+                            <th class="py-3 px-2 w-10 text-center"><input type="checkbox" class="rounded border-gray-300 accent-primary w-4 h-4 mt-1"></th>
+                            <th class="py-3 px-4">Students <i class="fas fa-arrow-down ml-1 text-gray-300"></i></th>
+                            <th class="py-3 px-4">Location</th>
+                            <th class="py-3 px-4">Level</th>
+                            <th class="py-3 px-4">Progress</th>
+                            <th class="py-3 px-4 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50 text-sm" id="student-mgmt-tbody">
+                        ${studentRowsHtml.length > 0 ? studentRowsHtml : '<tr><td colspan="6" class="text-center py-10 text-gray-400 font-bold italic">No students found matching the criteria.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination footer -->
+            <div class="flex justify-between items-center mt-5 text-xs font-bold text-gray-500">
+                <button class="px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition"><i class="fas fa-chevron-left mr-1"></i> Previous</button>
+                <span>Page 1 of 1</span>
+                <button class="px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition">Next <i class="fas fa-chevron-right ml-1"></i></button>
+            </div>
+        </div>
+    </div>
+    `;
+
+    // Apply any active search filter after re-rendering
+    if(window.studentsAnalyticsSearch) {
+        filterStudentMgmtList(window.studentsAnalyticsSearch);
+    }
 }
-
 function setStudentsLevelFilter(level) {
     studentsAnalyticsLevel = level;
     studentsAnalyticsGrade = 'all';
@@ -1533,23 +1492,31 @@ function renderMasterRecordsView(container) {
         currentRecordSection = visiblePinnedSections.length > 0 ? visiblePinnedSections[0] : (yearSections.length > 0 ? yearSections[0] : null);
     }
 
-    const sectionBtnsHtml = visiblePinnedSections.map(sec => {
-        if (sec === 'all') return ''; // Handled separately
-        return `
-            <div class="inline-flex items-center rounded-full border text-[10px] font-bold overflow-hidden shadow-sm transition-all
-                    ${currentRecordSection === sec
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-gray-700 border-gray-300 hover:border-primary hover:text-primary'
-            } ">
-            <button onclick = "setPinnedSection('${sec}')" class="pl-3 pr-2 py-1.5 tracking-wide"> ${_getLabel(sec)}</button>
-                <button onclick="removePinnedSection('${sec}')" title="Remove section"
-                    class="pr-2 py-1.5 opacity-60 hover:opacity-100 hover:text-red-400 transition"
-                    style="${currentRecordSection === sec ? 'color:rgba(255,255,255,0.8)' : ''}">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            `;
-    }).join('');
+    let availableForSelect = Array.from(new Set([
+        ...(currentUser.role === 'teacher' && currentUser.handledSections ? currentUser.handledSections : []),
+        ...visiblePinnedSections
+    ])).filter(s => s !== 'all');
+
+    let dropdownOptions = '';
+    if (currentUser.role === 'admin' || currentUser.role === 'curriculum_coordinator') {
+        dropdownOptions += `<option value="all" ${currentRecordSection === 'all' ? 'selected' : ''}>All Sections</option>`;
+    }
+
+    availableForSelect.forEach(sec => {
+        dropdownOptions += `<option value="${sec}" ${currentRecordSection === sec ? 'selected' : ''}>${_getLabel(sec)}</option>`;
+    });
+
+    const sectionDropdownHtml = `
+        <div class="relative flex items-center bg-white border border-gray-200 rounded-xl shadow-sm hover:border-primary transition group overflow-hidden">
+            <button onclick="promptAddViewSection()" title="Add a section to view" class="bg-primary/10 px-3 py-2 flex items-center justify-center border-r border-gray-100 hover:bg-primary transition cursor-pointer group/btn">
+                <i class="fas fa-plus text-primary group-hover/btn:text-white transition text-xs"></i>
+            </button>
+            <select onchange="setPinnedSection(this.value)" class="text-xs font-bold text-gray-700 bg-transparent outline-none cursor-pointer pl-3 pr-8 py-2 appearance-none w-48">
+                ${dropdownOptions}
+            </select>
+            <i class="fas fa-chevron-down absolute right-3 text-[10px] text-gray-400 pointer-events-none group-hover:text-primary transition"></i>
+        </div>
+    `;
 
     container.innerHTML = `
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-slide-up flex flex-col" style="height: calc(100vh - 140px);">
@@ -1610,25 +1577,7 @@ function renderMasterRecordsView(container) {
                         </button>
                     </div>
                     ` : ''}
-                    ${currentUser.role === 'admin' ? `
-                    <button onclick="setPinnedSection('all')"
-                            class="px-3 py-1.5 rounded-full text-[10px] font-bold border uppercase tracking-wide transition shadow-sm
-                                   ${currentRecordSection === 'all'
-                ? 'bg-gray-800 text-white border-gray-800'
-                : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'}">
-                        All Sections
-                    </button>
-                    ` : ''}
-                    ${sectionBtnsHtml}
-                    ${unpinned.length > 0 ? `
-                    <div class="flex items-center gap-1 border border-dashed border-gray-300 rounded-full px-2 py-1 hover:border-primary transition">
-                        <i class="fas fa-plus text-gray-400 text-[9px]"></i>
-                        <select onchange="addPinnedSection(this.value); this.value='';"
-                                class="text-[10px] font-bold text-gray-500 bg-transparent outline-none cursor-pointer pr-1">
-                            <option value="" disabled selected>Add Section</option>
-                            ${unpinned.map(s => `<option value="${s}">${_getLabel(s)}</option>`).join('')}
-                        </select>
-                    </div>` : ''}
+                    ${sectionDropdownHtml}
                 </div>
             </div>
             <div class="overflow-auto flex-1 bg-white">
@@ -1744,6 +1693,114 @@ function removePinnedSection(sec) {
         showMessage(`Section "${sec}" removed and ${subject} grades cleared.`);
         renderRecords(document.getElementById('content-area'));
     });
+}
+
+window.promptAddViewSection = function() {
+    const rawSec = localStorage.getItem('cnhs_sections');
+    const sectionsData = rawSec ? JSON.parse(rawSec) : [];
+    const yearSections = sectionsData.filter(s => !s.schoolYear || s.schoolYear === (window.currentRecordSchoolYear || '2025-2026')).map(s => s.name);
+    
+    let availableForSelect = Array.from(new Set([
+        ...(currentUser.role === 'teacher' && currentUser.handledSections ? currentUser.handledSections : []),
+        ...pinnedSections
+    ])).filter(s => s !== 'all');
+    
+    const unpinned = yearSections.filter(s => !availableForSelect.includes(s));
+
+    const getGrade = (secName) => {
+        let match = secName.match(/\b([7-9]|1[0-2])\b/);
+        if (match) return 'Grade ' + match[1];
+        let sd = sectionsData.find(x => x.name === secName);
+        if (sd && sd.year) {
+            let m = sd.year.match(/\b([7-9]|1[0-2])\b/);
+            if (m) return 'Grade ' + m[1];
+        }
+        return 'Unknown';
+    };
+
+    const allAvailableGrades = Array.from(new Set(unpinned.map(s => getGrade(s)).filter(g => g !== 'Unknown'))).sort((a,b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+
+    const overlay = document.createElement('div');
+    overlay.id = 'add-view-sec-modal';
+    overlay.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in';
+
+    let listHTML = '';
+    if (unpinned.length === 0) {
+        listHTML = '<div class="p-6 text-center text-gray-400 italic text-sm">All sections are already added.</div>';
+    } else {
+        listHTML += unpinned.map(sec => `
+            <div onclick="addPinnedSectionAndClose('${sec}')" data-grade="${getGrade(sec)}" class="view-section-option px-5 py-3.5 cursor-pointer hover:bg-primary/5 transition border-b border-gray-100 last:border-0 text-sm text-gray-700 font-medium flex justify-between items-center group">
+                <span>${sec}</span><i class="fas fa-plus text-primary opacity-0 group-hover:opacity-100 transition"></i>
+            </div>
+        `).join('');
+    }
+
+    overlay.innerHTML = `
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-scale-up flex flex-col max-h-[90vh]">
+            <div class="shrink-0 mb-5 flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-1.5">Add Section to View</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">Search or filter to find a section's record.</p>
+                </div>
+                <button onclick="document.getElementById('add-view-sec-modal').remove()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            
+            <div class="shrink-0 mb-4 flex gap-2">
+                <div class="w-1/3 relative">
+                    <select id="view-grade-filter" onchange="filterViewSections()" class="w-full pl-3 pr-8 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition appearance-none">
+                        <option value="All">All Grades</option>
+                        ${allAvailableGrades.map(g => `<option value="${g}">${g}</option>`).join('')}
+                    </select>
+                    <i class="fas fa-chevron-down absolute right-3 top-4 text-[10px] text-gray-400 pointer-events-none"></i>
+                </div>
+                <div class="w-2/3 relative">
+                    <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
+                    <input type="text" id="search-view-section" placeholder="Search section..." class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition" onkeyup="filterViewSections()">
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto mb-2 bg-white border border-gray-200 rounded-xl relative shadow-inner h-64 select-none">
+                ${listHTML}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    window.addPinnedSectionAndClose = function(sec) {
+        if (sec && !pinnedSections.includes(sec)) {
+            pinnedSections.push(sec);
+            savePinnedSections();
+        }
+        currentRecordSection = sec;
+        renderRecords(document.getElementById('content-area'));
+        document.getElementById('add-view-sec-modal').remove();
+    };
+
+    window.filterViewSections = function () {
+        const queryEl = document.getElementById('search-view-section');
+        const filterEl = document.getElementById('view-grade-filter');
+        if (!queryEl || !filterEl) return;
+        const q = queryEl.value.toLowerCase();
+        const f = filterEl.value;
+
+        document.querySelectorAll('.view-section-option').forEach(el => {
+            const text = el.innerText.toLowerCase();
+            const g = el.getAttribute('data-grade');
+            
+            const matchQ = text.includes(q);
+            const matchF = (f === 'All' || g === f);
+
+            if (matchQ && matchF) {
+                el.classList.remove('hidden');
+                el.classList.add('flex');
+            } else {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+        });
+    };
 }
 
 function setPinnedSection(sec) {
@@ -2579,9 +2636,18 @@ function printReport(title) {
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>AI-Driven Student Evaluation System</h1>
-                <p><strong>${title}</strong></p>
+            <div class="header" style="border-bottom: none; margin-bottom: 20px;">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <img src="/img/kagawaran ng education logo.png" alt="DepEd Logo" style="height: 100px; display: block; margin: 0 auto 10px;">
+                    <div style="font-family: 'Times New Roman', Times, serif; color: #000;">
+                        <p style="margin: 0; font-size: 14px;">Republic of the Philippines</p>
+                        <h3 style="margin: 5px 0; font-size: 24px; font-weight: bold;">Department of Education</h3>
+                        <p style="margin: 0; font-size: 14px; font-weight: bold;">REGION VIII- EASTERN VISAYAS</p>
+                        <p style="margin: 0; font-size: 14px; font-weight: bold;">SCHOOLS DIVISION OF EASTERN SAMAR</p>
+                        <p style="margin: 0; font-size: 14px; font-weight: bold;">Can-avid national high school</p>
+                    </div>
+                </div>
+                <p style="font-size: 16px; font-weight: bold; margin-top: 10px; color: #166534;">${title}</p>
                 <p>Printed on: ${new Date().toLocaleString()}</p>
             </div>
             ${printContents}
@@ -2605,3 +2671,4 @@ function printReport(title) {
         setTimeout(() => document.body.removeChild(iframe), 1000);
     }, 250);
 }
+

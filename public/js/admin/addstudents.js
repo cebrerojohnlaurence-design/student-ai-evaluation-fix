@@ -173,14 +173,13 @@ async function manualAdd(e) {
 }
 
 async function deleteStudentFromDB(id, lrn) {
-    if (!confirm('Delete this student?')) return;
-    
-    const studentToRestore = students.find(s => s.lrn === lrn);
-    if (!studentToRestore) return;
-    
-    // Optimistically remove from UI
-    students = students.filter(s => s.lrn !== lrn);
-    navigate('add-student');
+    showConfirm('Delete this student?', () => {
+        const studentToRestore = students.find(s => s.lrn === lrn);
+        if (!studentToRestore) return;
+        
+        // Optimistically remove from UI
+        students = students.filter(s => s.lrn !== lrn);
+        navigate('add-student');
     
     showUndoToast(`Deleted student ${studentToRestore.name}`, 
     async () => {
@@ -203,6 +202,7 @@ async function deleteStudentFromDB(id, lrn) {
             students.push(studentToRestore);
             navigate('add-student');
         }
+        });
     });
 }
 
@@ -229,7 +229,7 @@ async function deleteSelectedStudents() {
     const checked = Array.from(document.querySelectorAll('.student-select:checked'));
     if (checked.length === 0) return;
 
-    if (!confirm(`Are you sure you want to delete ${checked.length} selected student(s)?`)) return;
+    showConfirm(`Are you sure you want to delete ${checked.length} selected student(s)?`, async () => {
 
     const ids = checked.map(cb => cb.value).filter(id => id && id !== 'undefined' && id !== 'null');
 
@@ -267,6 +267,7 @@ async function deleteSelectedStudents() {
         const selectAll = document.getElementById('selectAll');
         if (selectAll) selectAll.checked = false;
     }
+    });
 }
 
 function searchAddStudentTable(val) {

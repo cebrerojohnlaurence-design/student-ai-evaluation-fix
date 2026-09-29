@@ -12,6 +12,12 @@ let _sectionFilter = 'ALL';
 let _schoolYearFilter = '2025-2026';
 let _sectionSearch = '';
 let _enrolledStudentSearch = '';
+let _gradeFilter = 'ALL';
+
+function setGradeFilter(filter) {
+    _gradeFilter = filter;
+    renderAssignSection(document.getElementById('content-area'));
+}
 
 async function setSchoolYearFilter(sy) {
     _schoolYearFilter = sy;
@@ -98,8 +104,27 @@ function renderAssignSection(container) {
 
         const matchesYear = !sec.schoolYear || sec.schoolYear === _schoolYearFilter;
         const matchesSearch = _sectionSearch === '' || (sec.name || '').toLowerCase().includes(_sectionSearch);
-        return matchesFilter && matchesYear && matchesSearch;
+        const matchesGrade = _gradeFilter === 'ALL' || sec.year === _gradeFilter;
+        
+        return matchesFilter && matchesYear && matchesSearch && matchesGrade;
     });
+
+    let availableGrades = [...new Set(_sections.filter(s => {
+        const gradeNum = parseInt((s.year || '').replace(/\D/g, '')) || 0;
+        if (currentUser.role === 'curriculum_coordinator') {
+            if (currentUser.department === 'JHS') return gradeNum <= 10;
+            else if (currentUser.department === 'SHS') return gradeNum >= 11;
+        }
+        return true;
+    }).map(s => s.year))].filter(Boolean).sort((a,b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+
+    let gradeDropdownHtml = '<div class="relative w-1/3 shrink-0">' +
+        '<select onchange="setGradeFilter(this.value)" class="w-full pl-3 pr-8 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-sm focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition appearance-none">' +
+        '<option value="ALL">All Grades</option>' +
+        availableGrades.map(g => '<option value="'+g+'" '+(_gradeFilter === g ? 'selected' : '')+'>'+g+'</option>').join('') +
+        '</select>' +
+        '<i class="fas fa-chevron-down absolute right-4 top-4 text-[10px] text-gray-400 pointer-events-none"></i>' +
+        '</div>';
 
     let filterTabsHtml = '<div class="flex bg-white rounded-xl shadow-sm border border-gray-100 p-1 shrink-0">';
     if (currentUser.role !== 'curriculum_coordinator') {
@@ -197,10 +222,13 @@ function renderAssignSection(container) {
         '<div class="lg:col-span-5 flex flex-col gap-4 max-h-[80vh] min-h-[500px] animate-slide-up">' +
         // Filter Tabs
         filterTabsHtml +
-        // Search Box
-        '<div class="relative shrink-0">' +
+        // Search Box and Dropdown
+        '<div class="flex gap-2 shrink-0">' +
+        gradeDropdownHtml +
+        '<div class="relative flex-1">' +
         '<i class="fas fa-search absolute left-4 top-3.5 text-gray-300 text-sm"></i>' +
         '<input type="text" value="' + (_sectionSearch || '') + '" oninput="searchSections(this.value)" placeholder="Search section by name..." class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-2xl text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 bg-white shadow-sm transition">' +
+        '</div>' +
         '</div>' +
         // List
         '<div class="flex-1 overflow-y-auto pr-2 pb-10 custom-scrollbar">' +
@@ -400,9 +428,20 @@ function printSectionMasterlist(sectionName) {
             th { background-color: #f8f9fa; font-weight: bold; text-transform: uppercase; font-size: 13px; }
             td { font-size: 14px; }
             .index { width: 40px; text-align: center; font-weight: bold; color: #777; }
+            @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         </style>
     </head>
     <body>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="/img/kagawaran ng education logo.png" alt="DepEd Logo" style="height: 100px; display: block; margin: 0 auto 10px;">
+            <div style="font-family: 'Times New Roman', Times, serif; color: #000;">
+                <p style="margin: 0; font-size: 14px;">Republic of the Philippines</p>
+                <h3 style="margin: 5px 0; font-size: 24px; font-weight: bold;">Department of Education</h3>
+                <p style="margin: 0; font-size: 14px; font-weight: bold;">REGION VIII- EASTERN VISAYAS</p>
+                <p style="margin: 0; font-size: 14px; font-weight: bold;">SCHOOLS DIVISION OF EASTERN SAMAR</p>
+                <p style="margin: 0; font-size: 14px; font-weight: bold;">Can-avid national high school</p>
+            </div>
+        </div>
         <h2>Class Masterlist: ${sectionName}</h2>
         <p>Total Enrolled: ${enrolled.length}</p>
         
@@ -692,12 +731,50 @@ function _renderAssignScanResults(found) {
     let assignCount = 0;
     let alreadyCount = 0;
 
+    const levenshtein = (a, b) => {
+        if (!a || !b) return (a || b || '').length;
+        const matrix = [];
+        for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+        for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+                else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+            }
+        }
+        return matrix[b.length][a.length];
+    };
+
     const rows = found.map((f, i) => {
         let matched = null;
         if (f.lrn) matched = students.find(s => String(s.lrn) === String(f.lrn));
+        
         if (!matched && f.name) {
-            const searchName = f.name.toLowerCase().split(',')[0].trim();
-            matched = students.find(s => s.name.toLowerCase().includes(searchName));
+            const cleanF = f.name.toLowerCase().replace(/[^a-zñ\s]/g, '').trim();
+            const fParts = cleanF.split(/\s+/);
+            const fLastName = fParts.length > 0 ? fParts[0] : cleanF; // Usually Last, First.
+
+            // 1. Try exact substring match first (most robust for clean data)
+            matched = students.find(s => s.name.toLowerCase().includes(fLastName));
+
+            // 2. Try fuzzy match on last name if exact fails
+            if (!matched) {
+                let bestMatch = null;
+                let minDistance = 3; // Max allowed distance is 2
+
+                for (const s of students) {
+                    const cleanS = s.name.toLowerCase().replace(/[^a-zñ\s]/g, '').trim();
+                    const sParts = cleanS.split(/\s+/);
+                    const sLastName = sParts.length > 0 ? sParts[0] : cleanS;
+                    
+                    const dist = levenshtein(fLastName, sLastName);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        bestMatch = s;
+                    }
+                }
+                matched = bestMatch;
+            }
         }
 
         const alreadyInSection = matched && matched.section === _selectedSection.name;
@@ -708,10 +785,10 @@ function _renderAssignScanResults(found) {
             statusBadge = '<span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-bold">Already in section</span>';
         } else if (matched) {
             assignCount++;
-            statusBadge = '<span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold border border-blue-100">Move Section</span>';
+            const isUnassigned = !matched.section || matched.section === 'null';
+            statusBadge = `<span class="text-[10px] px-2 py-0.5 rounded-full ${isUnassigned ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-blue-50 text-blue-600 border border-blue-100'} font-bold">${isUnassigned ? 'Assign Section' : 'Move Section'}</span>`;
         } else {
-            createCount++;
-            statusBadge = '<span class="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-600 font-bold border border-green-100">New (Create)</span>';
+            statusBadge = '<span class="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-bold border border-red-100">Not Found (Skipped)</span>';
         }
 
         const lrnDisplay = f.lrn || (matched ? matched.lrn : '<span class="italic text-gray-300">Auto-generate</span>');
@@ -737,9 +814,9 @@ function _renderAssignScanResults(found) {
         '</div>' +
         '<div class="flex flex-col gap-2">' +
         '<button onclick="confirmAssignScan()" class="w-full py-3.5 bg-green-600 text-white rounded-xl font-bold text-sm transition shadow-md hover:bg-green-700 flex items-center justify-center gap-2">' +
-        '<i class="fas fa-check-circle"></i> Confirm & Enroll ' + (assignCount + createCount) + ' Students' +
+        '<i class="fas fa-check-circle"></i> Confirm & Enroll ' + assignCount + ' Students' +
         '</button>' +
-        '<p class="text-[10px] text-gray-500 text-center leading-tight mt-1 mb-2">New students will be auto-generated in masterlist.<br>Existing students will be moved/promoted to this section.</p>' +
+        '<p class="text-[10px] text-gray-500 text-center leading-tight mt-1 mb-2">Unmatched names due to AI typos will be skipped to prevent duplicates.<br>Please assign them manually via the search bar.</p>' +
         '</div>';
 
     document.getElementById('assign-scan-btn').classList.add('hidden');
@@ -752,42 +829,28 @@ async function confirmAssignScan() {
     resultsDiv.innerHTML = '<div class="flex flex-col items-center justify-center p-6 gap-3"><div class="spinner border-primary"></div><p class="text-sm font-bold text-primary">Enrolling and Updating Masterlist...</p></div>';
 
     let successCount = 0;
+    const processedIds = new Set();
 
-    const promises = _pendingAssignScan.map(async (f) => {
+    for (const f of _pendingAssignScan) {
         try {
             if (f._matchedData) {
-                if (f._matchedData.section === _selectedSection.name) return;
-                await fetch('/api/students/' + (f._matchedData.id || f._matchedData.lrn), {
+                const sid = f._matchedData.id || f._matchedData.lrn;
+                if (processedIds.has(sid)) continue;
+                processedIds.add(sid);
+
+                if (f._matchedData.section === _selectedSection.name) continue;
+                const res = await fetch('/api/students/' + sid, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ section: _selectedSection.name, school_year: _schoolYearFilter })
                 });
-                f._matchedData.section = _selectedSection.name;
-                successCount++;
-            } else {
-                const randomLrn = f.lrn || Math.floor(10000000 + Math.random() * 90000000).toString();
-                const res = await fetch('/api/students', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({ lrn: randomLrn, name: f.name || 'Unknown', section: _selectedSection.name, adviser: 'Pending Assignment' })
-                });
                 if (res.ok) {
-                    const saved = await res.json();
-                    students.push({
-                        id: saved.id,
-                        lrn: saved.lrn,
-                        name: saved.name,
-                        section: saved.section,
-                        adviser: saved.adviser,
-                        gwa: 0, attendance: 0, status: 'Active', subjects: []
-                    });
+                    f._matchedData.section = _selectedSection.name;
                     successCount++;
                 }
             }
         } catch (e) { }
-    });
-
-    await Promise.all(promises);
+    }
 
     logActivity(`Admin bulk enrolled/updated ${successCount} students into ${_selectedSection.name}`);
     showMessage(`Successfully enrolled ${successCount} students to ${_selectedSection.name}.`);

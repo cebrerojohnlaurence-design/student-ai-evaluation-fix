@@ -243,12 +243,12 @@
                 errEl = document.createElement("div");
                 errEl.id = "login-error-msg";
                 errEl.className =
-                    "w-full text-center text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl py-2.5 px-3 mt-2";
+                    "flex items-center justify-center gap-2 w-full text-center text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 rounded-[14px] py-3 px-4 mt-3 shadow-sm";
                 document
                     .getElementById("login-btn")
                     .insertAdjacentElement("afterend", errEl);
             }
-            errEl.textContent = msg;
+            errEl.innerHTML = `<i class="ph-fill ph-warning-circle text-lg"></i> <span>${msg}</span>`;
         }
 
         async function executeAdminLogin() {

@@ -283,16 +283,36 @@ function recalcStudentSubject(s, subject) {
 
 // Global GWA computation
 function computeStudentGWA(s) {
-    let totalGWA = 0; let subCount = 0;
-    if (s.subjects) {
-        s.subjects.forEach(sub => {
-            if (sub.g !== null && sub.g !== undefined && parseFloat(sub.g) > 0) {
-                totalGWA += parseFloat(sub.g);
-                subCount++;
-            }
-        });
+    if (!s.subjects || s.subjects.length === 0) {
+        s.gwa = 0;
+        s.risk = 'Pending';
+        return;
     }
-    s.gwa = subCount > 0 ? parseFloat((totalGWA / subCount).toFixed(2)) : 0;
+
+    const bySubject = {};
+    s.subjects.forEach(sub => {
+        const name = sub.subject_name || sub.n;
+        if (!name) return;
+        if (!bySubject[name]) bySubject[name] = [];
+        if (sub.g !== null && sub.g !== undefined && parseFloat(sub.g) > 0) {
+            bySubject[name].push(parseFloat(sub.g));
+        }
+    });
+
+    let totalFinal = 0;
+    let subCount = 0;
+
+    Object.keys(bySubject).forEach(subName => {
+        const grades = bySubject[subName];
+        if (grades.length > 0) {
+            const sum = grades.reduce((a, b) => a + b, 0);
+            const finalGrade = Math.round(sum / grades.length);
+            totalFinal += finalGrade;
+            subCount++;
+        }
+    });
+
+    s.gwa = subCount > 0 ? parseFloat((totalFinal / subCount).toFixed(2)) : 0;
     s.risk = s.gwa > 0 && s.gwa < 75 ? 'High' : (s.gwa >= 75 ? 'Low' : 'Pending');
 }
 
@@ -346,12 +366,7 @@ async function initAppData() {
             // only populate s.subjects with the active quarter (default 1)
             const activeQ = window.currentRecordQuarter || 1;
             s.subjects = s.allSubjects.filter(sub => (sub.quarter || 1) == activeQ);
-
-            // Only recalculate IF there are raw scores. Otherwise use DB grade.
-            s.subjects.forEach(sub => {
-                const hasRaw = ['ww1', 'ww2', 'ww3', 'ww4', 'ww5', 'ww6', 'ww7', 'ww8', 'ww9', 'ww10', 'pt1', 'pt2', 'pt3', 'pt4', 'pt5', 'pt6', 'pt7', 'pt8', 'pt9', 'pt10', 'qa'].some(f => sub[f] !== null && sub[f] !== undefined && sub[f] !== '');
-                if (hasRaw) recalcStudentSubject(s, sub.n);
-            });
+            
             computeStudentGWA(s);
         });
 
@@ -427,6 +442,51 @@ function showMessage(msg, isError = false) {
         toast.classList.add('translate-y-[-150%]', 'opacity-0');
         setTimeout(() => toast.remove(), 300);
     }, 3000);
+}
+
+// Global Custom Confirm Wrapper (Replaces native confirm)
+window.showConfirm = function(msg, onConfirm, onCancel = null) {
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0';
+    
+    const modal = document.createElement('div');
+    modal.className = 'bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 transform transition-all duration-300 scale-95 opacity-0 text-center';
+    
+    modal.innerHTML = `
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Are you sure?</h3>
+        <p class="text-sm text-gray-500 mb-6">${msg}</p>
+        <div class="flex justify-center gap-3 w-full">
+            <button id="confirm-cancel" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition">Cancel</button>
+            <button id="confirm-ok" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 shadow-md transition">Confirm</button>
+        </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    setTimeout(() => {
+        overlay.classList.remove('opacity-0');
+        modal.classList.remove('scale-95', 'opacity-0');
+    }, 10);
+    
+    const close = () => {
+        overlay.classList.add('opacity-0');
+        modal.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => overlay.remove(), 300);
+    };
+    
+    document.getElementById('confirm-cancel').onclick = () => {
+        close();
+        if (onCancel) onCancel();
+    };
+    
+    document.getElementById('confirm-ok').onclick = () => {
+        close();
+        if (onConfirm) onConfirm();
+    };
 }
 
 async function login(role) {
@@ -703,21 +763,29 @@ function openGradesModal(isAdviserMode = false) {
     if (!dynArea) return; // Guard against missing element if UI changed
     const visibleSubjects = (currentUser.role === 'admin' || isAdviserMode) ? coreSubjects : (currentUser.subject ? currentUser.subject.split(',').map(s => s.trim()) : []);
 
+    const isPrincipal = currentUser.role === 'principal';
+
     dynArea.innerHTML = `
         <h4 class="text-[10px] font-bold text-primary uppercase mb-3 tracking-wider border-b border-green-200 pb-2">Final Subject Grades</h4>
         <div class="grid grid-cols-2 gap-3 mb-4">
             ${visibleSubjects.map(sub => `
-                <div><label class="text-[10px] font-bold text-gray-500 uppercase block mb-1">${sub}</label><input type="number" id="grade-fin-${sub}" min="60" max="100" class="w-full px-2 py-1.5 border rounded outline-none focus:border-primary text-sm bg-white" oninput="calcOverallGWA()"></div>
+                <div><label class="text-[10px] font-bold text-gray-500 uppercase block mb-1">${sub}</label><input type="number" id="grade-fin-${sub}" min="60" max="100" class="w-full px-2 py-1.5 border rounded outline-none focus:border-primary text-sm bg-white" oninput="calcOverallGWA()" ${isPrincipal ? 'disabled' : ''}></div>
             `).join('')}
         </div>
         <div class="grid grid-cols-2 gap-4 border-t border-green-200 pt-4">
-            <div><label class="text-[10px] font-bold text-gray-500 uppercase block mb-1">Attendance %</label><input type="number" id="grade-att" min="0" max="100" class="w-full px-2 py-2 border rounded outline-none focus:border-primary text-sm bg-white font-bold" ${(currentUser.role === 'teacher' && !isAdviserMode) ? 'disabled title="Only Advisers/Admins can edit attendance"' : ''}></div>
+            <div><label class="text-[10px] font-bold text-gray-500 uppercase block mb-1">Attendance %</label><input type="number" id="grade-att" min="0" max="100" class="w-full px-2 py-2 border rounded outline-none focus:border-primary text-sm bg-white font-bold" ${(currentUser.role === 'teacher' && !isAdviserMode) || isPrincipal ? 'disabled title="Only Advisers/Admins can edit attendance"' : ''}></div>
             <div class="p-2 bg-white border border-gray-200 rounded-lg flex flex-col justify-center items-center shadow-inner">
                 <span class="text-[10px] font-bold text-gray-400 uppercase">Overall GWA</span>
                 <span class="text-xl font-bold text-primary" id="calc-display">--</span>
             </div>
         </div>
     `;
+
+    const submitBtn = modal.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        if (isPrincipal) submitBtn.classList.add('hidden');
+        else submitBtn.classList.remove('hidden');
+    }
 }
 
 function closeGradesModal() { document.getElementById('grades-modal').classList.add('hidden'); }
@@ -957,37 +1025,86 @@ async function processAI() {
         
         data = JSON.parse(cleanRes);
 
-        const getClean = str => (str || '').toLowerCase().replace(/[^a-z]/g, '');
+        const levenshtein = (a, b) => {
+            if (!a || !b) return (a || b || '').length;
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+                    else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+                }
+            }
+            return matrix[b.length][a.length];
+        };
+
+        const getClean = str => (str || '').toLowerCase().replace(/[^a-zñ\s]/g, '').trim();
         const findStudentMatch = (itemName) => {
             if (!itemName) return null;
-            const parts = itemName.split(',');
-            const lastName = getClean(parts[0]);
-            const firstName = getClean(parts[1]);
-            const matchingLast = students.filter(x => getClean(x.name.split(',')[0]) === lastName);
-            if (matchingLast.length === 1) return matchingLast[0];
-            if (matchingLast.length > 1) {
-                return matchingLast.find(x => {
-                    const xFirst = getClean(x.name.split(',')[1]);
-                    return xFirst.includes(firstName) || firstName.includes(xFirst);
-                }) || matchingLast[0];
+            const cleanF = getClean(itemName);
+            const fParts = cleanF.split(/\s+/);
+            const fLastName = fParts.length > 0 ? fParts[0] : cleanF;
+
+            // 1. Exact or substring match on last name
+            let matched = students.find(s => s.name.toLowerCase().includes(fLastName));
+
+            // 2. Fuzzy match on last name if exact fails
+            if (!matched) {
+                let bestMatch = null;
+                let minDistance = 3;
+                for (const s of students) {
+                    const cleanS = getClean(s.name);
+                    const sParts = cleanS.split(/\s+/);
+                    const sLastName = sParts.length > 0 ? sParts[0] : cleanS;
+                    const dist = levenshtein(fLastName, sLastName);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        bestMatch = s;
+                    }
+                }
+                matched = bestMatch;
             }
-            const rawName = getClean(itemName);
-            return students.find(x => getClean(x.name).includes(rawName) || rawName.includes(getClean(x.name)));
+            return matched;
         };
 
         if (currentMode === 'STUDENT_LIST') {
-            await Promise.all(data.map(async x => {
-                students.push({ ...x, gwa: 0, attendance: 0, subjects: [] });
+            let successCount = 0;
+            let skipCount = 0;
+            for (const x of data) {
                 try {
-                    await fetch('/api/students', {
+                    // Prevent duplicate creation
+                    const existing = findStudentMatch(x.name);
+                    if (existing) {
+                        skipCount++;
+                        continue;
+                    }
+
+                    const randomLrn = x.lrn || Math.floor(10000000 + Math.random() * 90000000).toString();
+                    const res = await fetch('/api/students', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                        body: JSON.stringify({ lrn: x.lrn, name: x.name, section: x.section || null, adviser: 'Pending Assignment' })
+                        body: JSON.stringify({ lrn: randomLrn, name: x.name, section: x.section || null, adviser: 'Pending Assignment' })
                     });
+                    if (res.ok) {
+                        const saved = await res.json();
+                        students.push({
+                            id: saved.id,
+                            lrn: saved.lrn,
+                            name: saved.name,
+                            section: saved.section,
+                            adviser: saved.adviser,
+                            gwa: 0, attendance: 0, status: 'Active', subjects: []
+                        });
+                        successCount++;
+                    }
                 } catch (e) { }
-            }));
-            logActivity(`AI registered ${data.length} new students via list scan.`);
-            showMessage(`AI detected and added ${data.length} student profiles.`);
+            }
+            logActivity(`AI registered ${successCount} new students via list scan. Skipped ${skipCount} duplicates.`);
+            const msg = skipCount > 0 
+                ? `AI detected and added ${successCount} new students. (Skipped ${skipCount} duplicates)`
+                : `AI detected and added ${successCount} student profiles.`;
+            showMessage(msg);
             navigate('add-student');
         } else if (currentMode === 'CLASS_RECORD' && currentSubjectView) {
             let count = 0;
@@ -1570,12 +1687,20 @@ async function showReport(s) {
     // Basic heuristics from section name
     if (s.section) {
         const sec = s.section.toLowerCase();
-        if (sec.includes('7')) guessedYear = 'Grade 7';
-        else if (sec.includes('8')) guessedYear = 'Grade 8';
-        else if (sec.includes('9')) guessedYear = 'Grade 9';
-        else if (sec.includes('10')) guessedYear = 'Grade 10';
-        else if (sec.includes('11')) guessedYear = 'Grade 11';
-        else if (sec.includes('12')) guessedYear = 'Grade 12';
+        let m = s.section.match(/\b([7-9]|1[0-2])\b/);
+        if (m) {
+            guessedYear = 'Grade ' + m[1];
+        } else {
+            // Check localStorage sections
+            try {
+                const savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+                const secData = savedSections.find(x => x.name.toLowerCase() === sec);
+                if (secData && secData.year) {
+                    let m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
+                    if (m2) guessedYear = 'Grade ' + m2[1];
+                }
+            } catch(e) {}
+        }
         
         // Fallback: Check adviser
         if (!guessedYear && typeof teachers !== 'undefined') {

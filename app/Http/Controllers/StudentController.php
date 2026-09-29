@@ -71,16 +71,26 @@ class StudentController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
 
+        $history = [];
+        if ($request->section) {
+            $history[] = [
+                'school_year' => '2025-2026', // Default fallback, though ideally passed
+                'section'     => $request->section,
+                'adviser'     => $request->adviser ?? 'Pending Assignment',
+            ];
+        }
+
         $student = Student::create([
-            'lrn'        => $request->lrn,
-            'name'       => $request->name,
-            'address'    => $request->address ?? null,
-            'section'    => $request->section ?? null,
-            'adviser'    => $request->adviser ?? 'Pending Assignment',
-            'attendance' => 0,
-            'status'     => 'Active',
-            'gwa'        => 0,
-            'risk'       => 'Pending',
+            'lrn'                => $request->lrn,
+            'name'               => $request->name,
+            'address'            => $request->address ?? null,
+            'section'            => $request->section ?? null,
+            'adviser'            => $request->adviser ?? 'Pending Assignment',
+            'attendance'         => 0,
+            'status'             => 'Active',
+            'gwa'                => 0,
+            'risk'               => 'Pending',
+            'enrollment_history' => $history,
         ]);
 
         return response()->json($student, 201);
