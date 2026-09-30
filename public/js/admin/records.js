@@ -189,7 +189,7 @@ function renderAdviserSectionList(container) {
     } else {
         const cards = sectionList.map(sec => {
             const ss = students.filter(s => s.section === sec);
-            const atRisk = ss.filter(s => s.gwa > 0 && s.gwa < 75).length;
+            const atRisk = ss.filter(s => (s.gwa > 0 && s.gwa < 75) || (s.subjects || []).some(x => x.g !== null && parseFloat(x.g) < 75) || (s.allSubjects || []).some(x => x.g !== null && parseFloat(x.g) < 75)).length;
             const withGrades = ss.filter(s => s.gwa > 0).length;
             const riskColor = atRisk > 0 ? 'text-red-500' : 'text-gray-400';
             return `<div class="relative group">
@@ -574,7 +574,7 @@ function renderAdviserSectionStudents(container) {
             const gwaVal = parseFloat(displayGWA);
             if (!isNaN(gwaVal)) {
                 const isSH = window.currentRecordGradeLevel >= 11;
-                const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+                const hasFailing = (s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75)) || (s.subjects || []).some(x => x.g !== null && parseFloat(x.g) < 75) || (s.allSubjects || []).some(x => x.g !== null && parseFloat(x.g) < 75);
 
                 if (isSH) {
                     if (gwaVal >= 90 && !hasFailing) {
@@ -1025,7 +1025,7 @@ function renderAdminStudentsAnalytics(container) {
     // 3. Render Profile Summary
     // 4. Render Table Rows
     const studentRowsHtml = filtered.sort((a,b) => a.name.localeCompare(b.name)).map(s => {
-        const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+        const hasFailing = (s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75)) || (s.subjects || []).some(x => x.g !== null && parseFloat(x.g) < 75) || (s.allSubjects || []).some(x => x.g !== null && parseFloat(x.g) < 75);
         let statusText = 'Pending';
         let statusColor = 'bg-gray-100 text-gray-500';
         let barColor = 'bg-gray-300';
@@ -1037,7 +1037,7 @@ function renderAdminStudentsAnalytics(container) {
                 statusText = 'Excellent';
                 statusColor = 'bg-emerald-100 text-emerald-700';
                 barColor = 'bg-emerald-500';
-            } else if (s.gwa >= 75) {
+            } else if (s.gwa >= 75 && !hasFailing) {
                 statusText = 'Passing';
                 statusColor = 'bg-blue-100 text-blue-700';
                 barColor = 'bg-blue-500';
@@ -1258,7 +1258,7 @@ function renderAdminTeacherSections(container) {
         const evaluated = secStudents.filter(s =>
             s.subjects && s.subjects.some(sub => subjectList.includes(sub.n) && sub.g !== null && sub.g !== undefined)
         ).length;
-        const atRisk = secStudents.filter(s => s.gwa > 0 && s.gwa < 75).length;
+        const atRisk = secStudents.filter(s => (s.gwa > 0 && s.gwa < 75) || (s.subjects || []).some(x => x.g !== null && parseFloat(x.g) < 75) || (s.allSubjects || []).some(x => x.g !== null && parseFloat(x.g) < 75)).length;
 
         return `
                             <div
@@ -1446,12 +1446,12 @@ function renderAdminSectionStudents(container) {
 
                 let badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-gray-100 text-gray-500">No Grades</span>';
                 const isSH = window.currentRecordGradeLevel >= 11;
-                const hasFailing = s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75);
+                const hasFailing = (s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75)) || (s.subjects || []).some(x => x.g !== null && parseFloat(x.g) < 75) || (s.allSubjects || []).some(x => x.g !== null && parseFloat(x.g) < 75);
                 
                 if (isSH) {
                     if (s.gwa >= 90 && !hasFailing) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Academic Excellence Award</span>';
-                    } else if (s.gwa >= 75) {
+                    } else if (s.gwa >= 75 && !hasFailing) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
                     } else if (s.gwa > 0) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
