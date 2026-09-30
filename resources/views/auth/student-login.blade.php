@@ -157,7 +157,9 @@
                     <input
                         type="text"
                         id="login-user"
-                        placeholder="Enter LRN"
+                        placeholder="Enter 12-digit LRN"
+                        maxlength="12"
+                        minlength="12"
                         class="w-full bg-transparent pt-6 pb-2 px-5 outline-none text-sm font-bold text-slate-700 relative z-20 transition-all"
                     />
                 </div>

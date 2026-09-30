@@ -60,7 +60,7 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'lrn'     => 'required|string|max:20|unique:students,lrn',
+            'lrn'     => 'required|string|size:12|regex:/^[0-9]{12}$/|unique:students,lrn',
             'name'    => 'required|string|max:150',
             'address' => 'nullable|string|max:255',
             'section' => 'nullable|string|max:100',

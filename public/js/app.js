@@ -1086,7 +1086,7 @@ async function processAI() {
                         continue;
                     }
 
-                    const randomLrn = x.lrn || Math.floor(10000000 + Math.random() * 90000000).toString();
+                    const randomLrn = x.lrn || Math.floor(100000000000 + Math.random() * 900000000000).toString();
                     const res = await fetch('/api/students', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },

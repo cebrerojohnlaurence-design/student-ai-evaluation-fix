@@ -25,10 +25,10 @@ function renderAddStudent(container) {
                 </div>
                 <form onsubmit="manualAdd(event)" class="space-y-5 pt-2">
                     <div class="w-full sm:w-2/3 md:w-1/2">
-                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">LRN (8 Digits)</label>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">LRN (12 Digits)</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i class="fas fa-id-card text-gray-400"></i></div>
-                            <input type="text" id="m-lrn" required maxlength="8" pattern="[0-9]{8}"
+                            <input type="text" id="m-lrn" required maxlength="12" pattern="[0-9]{12}"
                                 class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition shadow-sm"
                                 placeholder="e.g. 12345678" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
