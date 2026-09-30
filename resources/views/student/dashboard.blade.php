@@ -37,18 +37,12 @@
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center gap-3">
-                    <div
-                        class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/20"
-                    >
-                        <i
-                            class="fas fa-graduation-cap text-accent text-xl"
-                        ></i>
-                    </div>
+                    <img src="/img/logo.png" alt="Logo" class="w-10 h-10 object-cover rounded-xl border border-white/20 bg-white/10">
                     <div>
                         <h1
                             class="text-sm font-bold tracking-tight leading-tight"
                         >
-                            City National High School
+                            Can-avid National High School
                         </h1>
                         <p class="text-[10px] text-primaryLight uppercase tracking-wider font-semibold">Student Portal</p>
                     </div>
@@ -417,3 +411,4 @@
     <script src="{{ asset('js/student/dashboard.js') }}"></script>
 </body>
 </html>
+

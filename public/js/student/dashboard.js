@@ -184,7 +184,7 @@ async function renderEnrolledGrades() {
 
     // Auto-inject standard curriculum subjects for JHS
     if ((gradeLevel >= 7 && gradeLevel <= 10) || (!isSHS)) {
-        stdSubjects = ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'MAPEH', 'ESP', 'TLE'];
+        stdSubjects = ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'MAPEH', 'Edukasyon sa Pagpapakatao', 'Technology and Livelihood Education'];
     }
     
     stdSubjects.forEach(sub => {
@@ -378,82 +378,15 @@ async function renderEnrolledGrades() {
         riskIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
     }
 
-    // Attendance (Calculate relative to selected records if available)
-    const session = getStudentSession();
-    const lrn = session ? session.lrn : null;
-    if (lrn) {
-        fetch(`/api/attendance/${lrn}`)
-            .then(r => r.ok ? r.json() : [])
-            .then(attData => {
-                let totalMarks = 0;
-                let presentMarks = 0;
-                
-                const yearlyAtt = syTarget ? attData.filter(a => a.school_year === syTarget) : attData;
+    // Attendance
+      if (window.studentData && window.studentData.attendance !== null && window.studentData.attendance !== undefined && parseFloat(window.studentData.attendance) > 0) {
+          document.getElementById('student-attendance').innerText = parseFloat(window.studentData.attendance).toFixed(2);
+      } else {
+          document.getElementById('student-attendance').innerText = "--";
+      }
+  }
 
-                yearlyAtt.forEach(row => {
-                    // Force them as integers
-                    let sd = parseInt(row.school_days);
-                    let dp = parseInt(row.days_present);
-                    
-                    if (!isNaN(sd) && sd > 0) {
-                        totalMarks += sd;
-                        presentMarks += (!isNaN(dp) ? dp : 0);
-                    } else {
-                        let marks = row.daily_marks || row.marks;
-                        if (typeof marks === 'string') {
-                            try { marks = JSON.parse(marks); } catch(e) {}
-                        }
-                        if (marks && Array.isArray(marks)) {
-                            marks.forEach(m => {
-                                if (m === '/' || (m && m.toLowerCase() === 'p')) presentMarks++;
-                                if (m !== '' && m !== null) totalMarks++;
-                            });
-                        }
-                    }
-                });
-                
-                if (totalMarks > 0) {
-                    const pct = ((presentMarks / totalMarks) * 100).toFixed(2);
-                    document.getElementById('student-attendance').innerText = pct;
-                } else if (window.studentData && window.studentData.attendance !== null && window.studentData.attendance !== undefined) {
-                    document.getElementById('student-attendance').innerText = parseFloat(window.studentData.attendance).toFixed(2);
-                } else {
-                    // ULTIMATE FALLBACK: fetch directly from the main students API where we know it works
-                    fetch('/api/students')
-                        .then(res => res.json())
-                        .then(allStudents => {
-                            const me = allStudents.find(s => s.lrn === lrn);
-                            if (me && me.attendance !== null && me.attendance !== undefined && parseFloat(me.attendance) >= 0) {
-                                document.getElementById('student-attendance').innerText = parseFloat(me.attendance).toFixed(2);
-                            } else {
-                                document.getElementById('student-attendance').innerText = "--";
-                            }
-                        })
-                        .catch(() => {
-                            document.getElementById('student-attendance').innerText = "--"; 
-                        });
-                }
-            })
-            .catch((err) => {
-                console.error("Attendance fetch error:", err);
-                fetch('/api/students')
-                    .then(res => res.json())
-                    .then(allStudents => {
-                        const me = allStudents.find(s => s.lrn === lrn);
-                        if (me && me.attendance !== null && me.attendance !== undefined && parseFloat(me.attendance) >= 0) {
-                            document.getElementById('student-attendance').innerText = parseFloat(me.attendance).toFixed(2);
-                        } else {
-                            document.getElementById('student-attendance').innerText = "--";
-                        }
-                    })
-                    .catch(() => {
-                        document.getElementById('student-attendance').innerText = "--"; 
-                    });
-            });
-    }
-}
-
-// --- Profile Upload Logic ---
+  // --- Profile Upload Logic ---
 function triggerProfileUpload() {
     document.getElementById('profile-upload-input').click();
 }
@@ -596,4 +529,9 @@ async function saveQrPin() {
         btn.disabled = false;
     }
 }
+
+
+
+
+
 

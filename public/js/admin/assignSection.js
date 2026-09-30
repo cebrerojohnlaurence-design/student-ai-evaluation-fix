@@ -1085,3 +1085,4 @@ function removeSelectedStudents() {
         renderAssignSection(document.getElementById('content-area'));
     });
 }
+
