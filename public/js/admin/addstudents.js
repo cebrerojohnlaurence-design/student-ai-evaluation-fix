@@ -104,7 +104,7 @@ function renderAddStudent(container) {
 async function manualAdd(e) {
     e.preventDefault();
     const lrn = document.getElementById('m-lrn').value;
-    if (lrn.length !== 8) return showMessage("Error: LRN must be exactly 8 numbers.", true);
+    if (lrn.length !== 12) return showMessage("Error: LRN must be exactly 12 numbers.", true);
 
     // Prevent duplicate LRN registration centrally
     if (students.find(s => String(s.lrn) === lrn)) {
