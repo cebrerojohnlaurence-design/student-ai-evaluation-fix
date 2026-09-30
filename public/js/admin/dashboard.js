@@ -10,20 +10,33 @@ let dashHasSHS = true;
 
 
 function getStudentGradeNumber(s) {
-    if (!s.section) return null;
-    let m = s.section.match(/\b([7-9]|1[0-2])\b/);
+    if (!s || !s.section) return null;
+    let secName = s.section.toUpperCase();
+    let m = secName.match(/\b([7-9]|1[0-2])\b/);
     if (m) return parseInt(m[1]);
     try {
         const savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
-        const secData = savedSections.find(x => x.name === s.section);
+        const secData = savedSections.find(x => x.name.toUpperCase() === secName);
         if (secData && secData.year) {
             let m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
             if (m2) return parseInt(m2[1]);
         }
     } catch(e) {}
+    
+    // Smart dictionary fallback based on CNHS naming conventions
+    // Grade 7: Philosophers
+    if (/(SOCRATES|PLATO|ARISTOTLE|PYTHAGORAS|CONFUCIUS|PHILOSOPHER)/.test(secName)) return 7;
+    // Grade 8: Minerals/Elements
+    if (/(COPPER|GOLD|SILVER|BRONZE|IRON|DIAMOND|EMERALD|JADE|MINERAL)/.test(secName)) return 8;
+    // Grade 9: Planets/Space
+    if (/(LUNA|EARTH|MARS|JUPITER|VENUS|SATURN|MERCURY|NEPTUNE|URANUS|PLANET)/.test(secName)) return 9;
+    // Grade 10: Specific Sections
+    if (/(SAGIP|MAHARLIKA|RIZAL|BONIFACIO|MABINI)/.test(secName)) return 10;
+
     if (typeof teachers !== 'undefined') {
-        const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s.section.toLowerCase()));
-        if (adv) return adv.level === 'SH' ? 11 : 7;
+        const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toUpperCase()).includes(secName));
+        // Do not force all unknown JHS sections to Grade 7! Leave them as null if unknown.
+        if (adv) return adv.level === 'SH' ? 11 : null;
     }
     return null;
 }
