@@ -26,7 +26,7 @@
 
     <script>
         window.APP_API_KEY = "{{ env('GEMINI_API_KEY') }}";
-        window.globalSettings = {!! \App\Models\Setting::all()->pluck('value', 'key')->toJson() !!};
+        window.globalSettings = <?php echo \App\Models\Setting::all()->pluck('value', 'key')->toJson(); ?>;
     </script>
 
     {{-- Tailwind Theme Config --}}

@@ -35,6 +35,29 @@ let studentsAnalyticsStrand = 'all';  // 'all' | 'ABM' | 'STEM' ...
 window.currentRecordSchoolYear = '2025-2026';
 window.currentRecordSemester = 1;
 
+function resolveSubjectsForSection(secName, studentList) {
+    if (!studentList || studentList.length === 0) return typeof coreSubjects !== 'undefined' ? coreSubjects : [];
+    let dynamicSubjects = [];
+    if (typeof getSubjectsForReport === 'function') {
+        const isSHS = secName.toLowerCase().includes('grade 11') || secName.toLowerCase().includes('grade 12') || secName.toLowerCase().includes('gr 11') || secName.toLowerCase().includes('gr 12');
+        const level = isSHS ? 'SH' : 'JH';
+        let gradeNum = 7;
+        if (typeof getStudentGradeNumber === 'function') {
+            gradeNum = getStudentGradeNumber(studentList[0]) || 7;
+        }
+        dynamicSubjects = getSubjectsForReport(level, studentList[0].strand || null, gradeNum, window.currentRecordSemester || 1);
+    }
+    if (!dynamicSubjects || dynamicSubjects.length === 0) {
+        let allSubs = [];
+        studentList.forEach(s => {
+            (s.subjects || []).forEach(sub => { if (!allSubs.includes(sub.n)) allSubs.push(sub.n); });
+            (s.allSubjects || []).forEach(sub => { if (!allSubs.includes(sub.n)) allSubs.push(sub.n); });
+        });
+        dynamicSubjects = allSubs.length > 0 ? allSubs : (typeof coreSubjects !== 'undefined' ? coreSubjects : []);
+    }
+    return dynamicSubjects;
+}
+
 
 
 function setRecordQuarter(q) {
@@ -492,7 +515,24 @@ function renderAdviserSectionStudents(container) {
     let secStudents = students.filter(s => s.section === sec);
     if (search) secStudents = secStudents.filter(s => s.name.toLowerCase().includes(search) || s.lrn.includes(search));
 
-    const subjectHeaders = coreSubjects.map(sub => '<th class="static-cell text-gray-600">' + sub + '</th>').join('');
+    let dynamicSubjects = [];
+    if (typeof getSubjectsForReport === 'function') {
+        const isSHS = sec.toLowerCase().includes('grade 11') || sec.toLowerCase().includes('grade 12') || sec.toLowerCase().includes('gr 11') || sec.toLowerCase().includes('gr 12');
+        const level = isSHS ? 'SH' : 'JH';
+        let gradeNum = 7;
+        if (typeof getStudentGradeNumber === 'function') gradeNum = getStudentGradeNumber(secStudents.length > 0 ? secStudents[0] : {section: sec}) || 7;
+        dynamicSubjects = getSubjectsForReport(level, null, gradeNum, window.currentRecordSemester || 1);
+    }
+    if (!dynamicSubjects || dynamicSubjects.length === 0) {
+        let allSubs = [];
+        secStudents.forEach(s => {
+            (s.subjects || []).forEach(sub => { if (!allSubs.includes(sub.n)) allSubs.push(sub.n); });
+            (s.allSubjects || []).forEach(sub => { if (!allSubs.includes(sub.n)) allSubs.push(sub.n); });
+        });
+        dynamicSubjects = allSubs.length > 0 ? allSubs : (typeof coreSubjects !== 'undefined' ? coreSubjects : []);
+    }
+
+    const subjectHeaders = dynamicSubjects.map(sub => '<th class="static-cell text-gray-600">' + sub + '</th>').join('');
 
     const rows = secStudents.length === 0
         ? '<tr><td colspan="30" class="py-12 text-center text-gray-400 italic">No students found.</td></tr>'
@@ -502,7 +542,7 @@ function renderAdviserSectionStudents(container) {
 
             let studentSemGrades = [];
 
-            const subCols = coreSubjects.map(subName => {
+            const subCols = dynamicSubjects.map(subName => {
                 let grade = '-';
                 if (window.currentRecordSemester) {
                     // Semester Mode: Average of Q1/Q2 or Q3/Q4
@@ -1275,7 +1315,29 @@ function renderAdminSectionStudents(container) {
     if (!t || !sec) { renderAdminTeacherList(container); return; }
 
     const subjectList = (t.subject || '').split(',').map(s => s.trim()).filter(Boolean);
-    const visibleSubjects = subjectList.length > 0 ? subjectList : coreSubjects;
+    let visibleSubjects = [];
+    if (subjectList.length > 0) {
+        visibleSubjects = subjectList;
+    } else {
+        if (typeof getSubjectsForReport === 'function') {
+            const isSHS = sec.toLowerCase().includes('grade 11') || sec.toLowerCase().includes('grade 12') || sec.toLowerCase().includes('gr 11') || sec.toLowerCase().includes('gr 12');
+            const level = isSHS ? 'SH' : 'JH';
+            let gradeNum = 7;
+            if (typeof getStudentGradeNumber === 'function') {
+                const sampleStudent = students.find(s => s.section === sec);
+                gradeNum = getStudentGradeNumber(sampleStudent || {section: sec}) || 7;
+            }
+            visibleSubjects = getSubjectsForReport(level, null, gradeNum, window.currentRecordSemester || 1);
+        }
+        if (!visibleSubjects || visibleSubjects.length === 0) {
+            let allSubs = [];
+            students.filter(s => s.section === sec).forEach(s => {
+                (s.subjects || []).forEach(sub => { if (!allSubs.includes(sub.n)) allSubs.push(sub.n); });
+                (s.allSubjects || []).forEach(sub => { if (!allSubs.includes(sub.n)) allSubs.push(sub.n); });
+            });
+            visibleSubjects = allSubs.length > 0 ? allSubs : (typeof coreSubjects !== 'undefined' ? coreSubjects : []);
+        }
+    }
 
     const search = adminSectionSearch.toLowerCase();
     let secStudents = students.filter(s => s.section === sec);
@@ -1486,7 +1548,7 @@ function renderMasterRecordsView(container) {
     const visiblePinnedSections = pinnedSections.filter(sec => yearSections.includes(sec) || sec === 'all');
     const unpinned = yearSections.filter(s => !visiblePinnedSections.includes(s));
     const teacherSubjects = currentUser.subject ? currentUser.subject.split(',').map(s => s.trim()) : [];
-    const visibleSubjects = currentUser.role === 'teacher' ? teacherSubjects : coreSubjects;
+    const visibleSubjects = currentUser.role === 'teacher' ? teacherSubjects : resolveSubjectsForSection(currentRecordSection || 'All', teacherStudents);
 
     if (currentRecordSection === 'all' && currentUser.role === 'teacher') {
         currentRecordSection = visiblePinnedSections.length > 0 ? visiblePinnedSections[0] : (yearSections.length > 0 ? yearSections[0] : null);
@@ -2072,9 +2134,7 @@ function filterRecordsTable() {
     const tbody = document.getElementById('records-table-body');
     if (!tbody) return;
 
-    const visibleSubjects = currentUser.role === 'teacher'
-        ? (currentUser.subject ? currentUser.subject.split(',').map(s => s.trim()) : [])
-        : coreSubjects;
+    const visibleSubjects = currentUser.role === 'teacher' ? (currentUser.subject ? currentUser.subject.split(',').map(s => s.trim()) : []) : resolveSubjectsForSection(currentRecordSection || 'All', students.filter(s => currentRecordSection === 'all' || s.section === currentRecordSection));
 
     let filtered = students;
     if (currentUser.role === 'teacher' && currentUser.handledSections && currentUser.handledSections.length > 0) {
@@ -2295,9 +2355,7 @@ async function saveManualGrades() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Saving...';
     btn.disabled = true;
 
-    const visibleSubjects = currentUser.role === 'teacher'
-        ? (currentUser.subject ? currentUser.subject.split(',').map(s => s.trim()) : [])
-        : coreSubjects;
+    const visibleSubjects = currentUser.role === 'teacher' ? (currentUser.subject ? currentUser.subject.split(',').map(s => s.trim()) : []) : resolveSubjectsForSection(currentRecordSection || 'All', students.filter(s => currentRecordSection === 'all' || s.section === currentRecordSection));
 
     const savePromises = [];
     let filtered = students;
