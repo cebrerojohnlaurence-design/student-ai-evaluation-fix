@@ -2706,10 +2706,7 @@ function printReport(title) {
         <body>
             <div class="header" style="border-bottom: none; margin-bottom: 20px;">
                 <div style="text-align: center; margin-bottom: 15px;">
-                    <div style="position: relative; height: 100px; margin-bottom: 10px;">
-                        <img src="/img/logo.png" style="position: absolute; left: 0; top: 0; height: 100px;" alt="School Logo" onerror="this.style.display='none'">
-                        <img src="/img/kagawaran ng education logo.png" style="position: absolute; right: 0; top: 0; height: 100px;" alt="DepEd Logo" onerror="this.style.display='none'">
-                    </div>
+                    <img src="/img/kagawaran ng education logo.png" style="height: 100px; display: inline-block; margin-bottom: 10px;" alt="DepEd Logo" onerror="this.style.display='none'">
                     <div style="font-family: 'Times New Roman', Times, serif; color: #000;">
                         <p style="margin: 0; font-size: 14px;">Republic of the Philippines</p>
                         <h3 style="margin: 5px 0; font-size: 24px; font-weight: bold;">Department of Education</h3>

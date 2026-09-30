@@ -2076,6 +2076,23 @@ async function loadAcademicReport() {
     const area = document.getElementById('academic-report-area');
     if (!area) return;
 
+    let advName = 'Pending Assignment';
+    if (typeof teachers !== 'undefined') {
+        const adv = teachers.find(t => t.is_adviser && (t.section || '').toLowerCase().includes((s.section || '').toLowerCase()));
+        if (adv) advName = adv.name;
+    } else if (s.adviser) {
+        advName = s.adviser;
+    }
+
+    let principalName = window.globalSettings?.principal_name || 'Principal Name';
+    if (typeof teachers !== 'undefined') {
+        const p = teachers.find(t => t.id && (t.id.startsWith('PRIN-') || t.id.toLowerCase() === 'principal'));
+        if (p) principalName = p.name;
+    }
+    if (typeof currentUser !== 'undefined' && currentUser.role === 'principal') {
+        principalName = currentUser.name;
+    }
+
     // Build Attendance Table HTML
     const sy = selectedSY;
     let attTotalSchool = 0;
@@ -2158,11 +2175,11 @@ async function loadAcademicReport() {
 
                         <div class="mt-20 grid grid-cols-2 gap-4 text-center text-[10px]">
                             <div class="space-y-1">
-                                <div class="pt-8 mb-1"><p class="font-bold border-b border-black pb-1 truncate">${s.adviser || 'Pending Assignment'}</p></div>
+                                <div class="pt-8 mb-1"><p class="font-bold border-b border-black pb-1 truncate">${advName}</p></div>
                                 <p class="font-bold">Class Adviser</p>
                             </div>
                             <div class="space-y-1">
-                                <div class="pt-8 mb-1"><p class="font-bold border-b border-black pb-1 truncate">${window.globalSettings?.principal_name || 'Principal Name'}</p></div>
+                                <div class="pt-8 mb-1"><p class="font-bold border-b border-black pb-1 truncate">${principalName}</p></div>
                                 <p class="font-bold">Principal</p>
                             </div>
                         </div>
