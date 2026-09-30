@@ -183,7 +183,6 @@ function getMaintenanceTabContent(tabId) {
         const appName = globalSettings['app_name'] || 'CNHS AI Student System';
         const contactPhone = globalSettings['contact_phone'] || '(055) 123-4567';
         const systemEmail = globalSettings['system_email'] || 'info@cnhs.edu.ph';
-        const principalName = globalSettings['principal_name'] || 'John Doe, Ph.D.';
 
         return `
             <div class="max-w-4xl">
@@ -211,10 +210,6 @@ function getMaintenanceTabContent(tabId) {
                         <input type="text" id="pref-system-email" value="${systemEmail}" class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-bold py-3 px-4 rounded-xl outline-none focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/20 transition-all">
                     </div>
 
-                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2"><i class="fas fa-user-tie mr-1"></i> Principal Name</label>
-                        <input type="text" id="pref-principal-name" value="${principalName}" class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-bold py-3 px-4 rounded-xl outline-none focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-400/20 transition-all">
-                    </div>
                 </div>
 
                 <div class="flex justify-end pt-8">
@@ -986,9 +981,8 @@ function saveSystemPrefs() {
     const app_name = document.getElementById('pref-app-name').value;
     const contact_phone = document.getElementById('pref-contact-phone').value;
     const system_email = document.getElementById('pref-system-email').value;
-    const principal_name = document.getElementById('pref-principal-name').value;
     
-    saveSettingsData({ app_name, contact_phone, system_email, principal_name }, 'Preferences saved successfully!').then(() => {
+    saveSettingsData({ app_name, contact_phone, system_email }, 'Preferences saved successfully!').then(() => {
         const sidebarTitle = document.querySelector('.sidebar-text h1');
         if (sidebarTitle) sidebarTitle.textContent = app_name;
     });
