@@ -154,7 +154,7 @@ class TeacherController extends Controller
     /**
      * PUT /api/teachers/{id} — Update a teacher (db id).
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, string $id)
     {
         $teacher = Teacher::findOrFail($id);
 
@@ -177,7 +177,7 @@ class TeacherController extends Controller
         }
 
         if ($request->has('school_year')) {
-            $history = is_string($teacher->assignment_history) ? json_decode($teacher->assignment_history, true) : ($teacher->assignment_history ?? []);
+            $history = $teacher->assignment_history ?? [];
             
             $history = array_filter($history, function($h) use ($request) {
                 return isset($h['school_year']) && $h['school_year'] !== $request->school_year;
@@ -207,7 +207,7 @@ class TeacherController extends Controller
             'level'      => $teacher->level ?? 'JH',
             'strand'     => $teacher->strand,
             'profile_picture' => $teacher->profile_picture,
-            'assignment_history' => is_string($teacher->assignment_history) ? json_decode($teacher->assignment_history, true) : $teacher->assignment_history,
+            'assignment_history' => $teacher->assignment_history,
             'has_qr_pin' => !empty($teacher->qr_pin),
         ]);
     }
@@ -215,7 +215,7 @@ class TeacherController extends Controller
     /**
      * DELETE /api/teachers/{id} — Delete a teacher (db id).
      */
-    public function destroy($id)
+    public function destroy(string $id)
     {
         $teacher = Teacher::findOrFail($id);
         $teacher->delete();
@@ -406,7 +406,7 @@ class TeacherController extends Controller
             $subject = $t->subject;
             
             if ($schoolYear && $t->assignment_history) {
-                $history = is_string($t->assignment_history) ? json_decode($t->assignment_history, true) : $t->assignment_history;
+                $history = $t->assignment_history;
                 if (is_array($history)) {
                     $found = collect($history)->firstWhere('school_year', $schoolYear);
                     if ($found) {

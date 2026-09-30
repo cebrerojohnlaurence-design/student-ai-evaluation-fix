@@ -13,7 +13,7 @@ class StudentSubjectController extends Controller
      * Return all subject score rows for a student.
      * Optional ?quarter=1..4 to filter by quarter.
      */
-    public function index($lrn, Request $request)
+    public function index(string $lrn, Request $request)
     {
         $student = Student::where('lrn', $lrn)->firstOrFail();
 

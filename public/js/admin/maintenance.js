@@ -55,13 +55,7 @@ async function renderMaintenance(container) {
                         <div class="active-indicator absolute inset-0 bg-gradient-to-r from-indigo-50 to-transparent opacity-0 transition-opacity"></div>
                     </button>
 
-                    <button onclick="switchMaintenanceTab('login')" id="mtab-login" class="mtab-btn w-full text-left px-5 py-4 rounded-2xl flex items-center gap-4 transition-all duration-300 font-bold bg-white shadow-sm border border-gray-100 hover:border-primary/30 hover:shadow-md text-gray-600 group relative overflow-hidden">
-                        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                            <i class="fas fa-sign-in-alt"></i>
-                        </div>
-                        <span class="z-10 relative">Login Layout</span>
-                        <div class="active-indicator absolute inset-0 bg-gradient-to-r from-emerald-50 to-transparent opacity-0 transition-opacity"></div>
-                    </button>
+
 
                     <button onclick="switchMaintenanceTab('prefs')" id="mtab-prefs" class="mtab-btn w-full text-left px-5 py-4 rounded-2xl flex items-center gap-4 transition-all duration-300 font-bold bg-white shadow-sm border border-gray-100 hover:border-primary/30 hover:shadow-md text-gray-600 group relative overflow-hidden">
                         <div class="w-10 h-10 rounded-xl bg-fuchsia-50 text-fuchsia-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
@@ -184,43 +178,7 @@ function getMaintenanceTabContent(tabId) {
             </div>
         `;
     } 
-    else if (tabId === 'login') {
-        return `
-            <div class="max-w-3xl">
-                <div class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl shadow-inner"><i class="fas fa-sign-in-alt"></i></div>
-                    <div>
-                        <h3 class="text-2xl font-black text-gray-800 tracking-tight">Login Portal Layout</h3>
-                        <p class="text-sm text-gray-500 font-medium">Customize the aesthetic of the main entry point.</p>
-                    </div>
-                </div>
-                
-                <div class="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 relative overflow-hidden group hover:border-emerald-200 transition-colors">
-                    
-                    <label class="block text-sm font-bold text-gray-700 mb-3">Hero Background Image</label>
-                    <div class="w-full h-64 rounded-2xl overflow-hidden relative shadow-inner border-4 border-gray-50 group-hover:border-emerald-50 transition-colors mb-6">
-                        <img id="bg-preview" src="/img/school.png" onerror="this.src=''" class="w-full h-full object-cover" />
-                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <label for="bg-upload-input" class="cursor-pointer bg-white/20 backdrop-blur-md text-white border border-white/40 px-6 py-3 rounded-xl font-bold text-sm hover:bg-white/40 transition-all flex items-center gap-2">
-                                <i class="fas fa-camera text-lg"></i> Replace Image
-                            </label>
-                            <input type="file" id="bg-upload-input" accept="image/*" class="hidden" onchange="previewMaintenanceImage(this, 'bg-preview')" />
-                        </div>
-                    </div>
 
-                    <div class="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
-                        <button onclick="restoreDefaultBackground()" id="btn-restore-bg" class="px-6 py-3 bg-gray-100 text-gray-600 hover:text-red-600 rounded-xl font-bold text-sm transition-all hover:bg-red-50 flex items-center gap-2">
-                            <i class="fas fa-undo-alt"></i> Restore Default
-                        </button>
-                        
-                        <button onclick="uploadMaintenanceBackground()" id="btn-save-bg" class="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-emerald-200 hover:bg-emerald-700 hover:shadow-lg flex items-center gap-2">
-                            <i class="fas fa-check-circle"></i> Save Background
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
     else if (tabId === 'prefs') {
         const appName = globalSettings['app_name'] || 'CNHS AI Student System';
         const contactPhone = globalSettings['contact_phone'] || '(055) 123-4567';
@@ -364,64 +322,7 @@ function getMaintenanceTabContent(tabId) {
                     </div>
                 </div>
 
-                <div class="space-y-4">
-                    <h4 class="font-bold text-gray-800 text-lg mb-2">Curriculum & Class Settings</h4>
-                    
-                    <div class="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex items-center justify-between hover:border-gray-300 transition-colors">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 text-xl"><i class="fas fa-book-open"></i></div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">Enrollment Status</h4>
-                                <p class="text-xs text-gray-500 mt-1 max-w-sm">Toggle whether the system accepts new student enrollments for the active school year.</p>
-                            </div>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" value="" checked class="sr-only peer" onchange="triggerMockSuccess(this.checked ? 'Enrollment is now OPEN.' : 'Enrollment is now CLOSED.')">
-                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600 shadow-inner"></div>
-                        </label>
-                    </div>
 
-                    <div class="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex items-center justify-between hover:border-gray-300 transition-colors">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 text-xl"><i class="fas fa-layer-group"></i></div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">Senior High School (SHS) Tracks</h4>
-                                <p class="text-xs text-gray-500 mt-1 max-w-sm">Enable specialized tracks (Academic, TVL, Sports, Arts) in the curriculum.</p>
-                            </div>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" value="" checked class="sr-only peer" onchange="triggerMockSuccess(this.checked ? 'SHS Tracks Enabled.' : 'SHS Tracks Disabled.')">
-                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600 shadow-inner"></div>
-                        </label>
-                    </div>
-
-                    <div class="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex items-center justify-between hover:border-gray-300 transition-colors">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 text-xl"><i class="fas fa-users-slash"></i></div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">Class Size Limit</h4>
-                                <p class="text-xs text-gray-500 mt-1 max-w-sm">Set the maximum number of students allowed per section to prevent overcrowding.</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <input type="number" value="45" class="w-20 bg-gray-50 border border-gray-200 text-gray-800 font-bold py-2 px-3 rounded-xl outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-400/20 text-center transition-all">
-                            <button onclick="triggerMockSuccess('Class size limit updated!')" class="px-4 py-2 bg-gray-100 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-200 transition-all">Save</button>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex items-center justify-between hover:border-gray-300 transition-colors">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-xl"><i class="fas fa-calculator"></i></div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">Grading Formula Configuration</h4>
-                                <p class="text-xs text-gray-500 mt-1 max-w-sm">Adjust DepEd standard weights for Written Works, Performance Tasks, and Quarterly Assessments.</p>
-                            </div>
-                        </div>
-                        <button onclick="triggerMockSuccess('Grading Formula Editor Opened')" class="px-5 py-2.5 bg-emerald-50 text-emerald-700 font-bold text-sm rounded-xl hover:bg-emerald-100 transition-all flex items-center gap-2 border border-emerald-200">
-                            <i class="fas fa-edit"></i> Edit Formula
-                        </button>
-                    </div>
-                </div>
             </div>
         `;
     }

@@ -93,7 +93,7 @@ class StudentController extends Controller
                 'risk'               => 'Pending',
                 'enrollment_history' => $history,
             ]);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return response()->json(['error' => 'Database Insert Error: ' . $e->getMessage()], 500);
         }
 
@@ -103,7 +103,7 @@ class StudentController extends Controller
     /**
      * DELETE /api/students/{id} — Delete a student by DB id.
      */
-    public function destroy($id)
+    public function destroy(string $id)
     {
         $student = Student::findOrFail($id);
         $student->delete();
@@ -126,7 +126,7 @@ class StudentController extends Controller
     /**
      * PUT /api/students/{id} — Update student fields.
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, string $id)
     {
         $student = Student::findOrFail($id);
         $data = $request->only(['name', 'section', 'adviser', 'attendance', 'status', 'gwa', 'risk']);
