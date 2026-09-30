@@ -326,8 +326,8 @@ async function renderEnrolledGrades() {
     if (gwaVal > 0) {
         document.getElementById('student-gwa').innerText = gwaVal.toFixed(2);
         let isSH = false;
-        if (currentUser && currentUser.section) {
-            const match = currentUser.section.match(/Grade (\d+)/i);
+        if (window.studentData && window.studentData.section) {
+            const match = window.studentData.section.match(/Grade (\d+)/i);
             if (match && parseInt(match[1]) >= 11) isSH = true;
         }
 
@@ -529,6 +529,7 @@ async function saveQrPin() {
         btn.disabled = false;
     }
 }
+
 
 
 
