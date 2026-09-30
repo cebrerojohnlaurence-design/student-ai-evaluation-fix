@@ -388,15 +388,17 @@ async function renderEnrolledGrades() {
                 let totalMarks = 0;
                 let presentMarks = 0;
                 
-                // Filter attendance to the targeted school year if provided
                 const yearlyAtt = syTarget ? attData.filter(a => a.school_year === syTarget) : attData;
 
                 yearlyAtt.forEach(row => {
-                    if (row.school_days && row.school_days > 0) {
-                        totalMarks += parseInt(row.school_days) || 0;
-                        presentMarks += parseInt(row.days_present) || 0;
+                    // Force them as integers
+                    let sd = parseInt(row.school_days);
+                    let dp = parseInt(row.days_present);
+                    
+                    if (!isNaN(sd) && sd > 0) {
+                        totalMarks += sd;
+                        presentMarks += (!isNaN(dp) ? dp : 0);
                     } else {
-                        // fallback to parsing daily_marks if school_days is 0 but daily_marks exist
                         let marks = row.daily_marks || row.marks;
                         if (typeof marks === 'string') {
                             try { marks = JSON.parse(marks); } catch(e) {}
@@ -413,12 +415,20 @@ async function renderEnrolledGrades() {
                 if (totalMarks > 0) {
                     const pct = ((presentMarks / totalMarks) * 100).toFixed(2);
                     document.getElementById('student-attendance').innerText = pct;
+                } else if (window.studentData && window.studentData.attendance > 0) {
+                    // Fallback to the precomputed DB value if calculation somehow fails or yields 0 totalMarks
+                    document.getElementById('student-attendance').innerText = parseFloat(window.studentData.attendance).toFixed(2);
                 } else {
                     document.getElementById('student-attendance').innerText = "--"; 
                 }
             })
-            .catch(() => {
-                document.getElementById('student-attendance').innerText = "--";
+            .catch((err) => {
+                console.error("Attendance fetch error:", err);
+                if (window.studentData && window.studentData.attendance > 0) {
+                    document.getElementById('student-attendance').innerText = parseFloat(window.studentData.attendance).toFixed(2);
+                } else {
+                    document.getElementById('student-attendance').innerText = "--";
+                }
             });
     }
 }

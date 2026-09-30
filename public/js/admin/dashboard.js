@@ -281,7 +281,7 @@ function openDrilldownModal(metric) {
     
     const titles = {
         'total': 'Total Students',
-        'attendance': 'Average Attendance (>=90%)',
+        'attendance': 'Average Attendance',
         'risk': 'At-Risk Students',
         'eval': 'Evaluation Done',
         'enrollment': 'Enrollment by Grade',
@@ -906,23 +906,13 @@ async function generateDashboardInsights() {
 
     const gradeFilter = window.globalDashGradeFilter || 'All';
     const sectionFilter = window.globalDashSectionFilter || 'All';
-    let summaryData = students.map(s => ({ s: s.section, g: s.gwa, a: s.attendance })).filter(s => s.g > 0);
-    
-    if (gradeFilter !== 'All') {
-        const check = gradeFilter.replace('Grade ', '');
-        summaryData = summaryData.filter(s => {
-            const m = (s.s || '').match(/\b([7-9]|1[0-2])\b/);
-            return m && m[1] === check;
-        });
-    }
-    if (sectionFilter !== 'All') {
-        summaryData = summaryData.filter(s => s.s === sectionFilter);
-    }
+    let filteredStudents = getFilteredDashboardStudents();
+    let summaryData = filteredStudents.map(s => ({ s: s.section, g: s.gwa, a: s.attendance })).filter(s => s.g > 0);
     
     let scopeText = gradeFilter;
     if (sectionFilter !== 'All') scopeText += ' - ' + sectionFilter;
 
-    const prompt = `Act as an expert Academic Data Analyst for the 'AI-Driven Student Evaluation System'. Analyze this student cohort data (for ${scopeText}) and provide a concise, 2-to-3 sentence executive summary. Highlight any notable anomalies, strong performing sections, or areas needing pedagogical attention. Keep it highly professional. Do not use markdown styling. Data: ${JSON.stringify(summaryData)}`;
+    const prompt = `Act as a friendly assistant helping a teacher understand their students' grades for ${scopeText}. Write a very simple, 2-to-3 sentence summary. Use basic, everyday English. Do NOT use deep or academic words like "cohort", "pedagogical", "interventions", "anomalies", or "executive summary". Just talk normally like a friendly colleague. Point out if the class is doing well and if there are students who need more help. Do not use markdown styling. Data: ${JSON.stringify(summaryData)}`;
 
     try {
         const response = await fetch('/api/chat', {
@@ -1163,7 +1153,7 @@ function renderDrilldownTable() {
             if (gNum <= 10) isJH = true;
         }
 
-        if (modalActiveMetric === 'attendance') return s.attendance >= 90;
+        if (modalActiveMetric === 'attendance') return true; // Show all students to explain the true average
         if (modalActiveMetric === 'risk') {
             let hasFailingSubject = false;
         if (s.subjects) {
@@ -1842,7 +1832,7 @@ window.renderSectionAverageModal = function() {
             const lowest = secArr[secArr.length - 1];
             let msg = `<strong>${highest.name}</strong> is currently leading `;
             if (secAvgGradeLevel !== 'All') msg += `for <strong>${secAvgGradeLevel}</strong> `;
-            msg += `with an outstanding average GWA of <strong>${highest.avg}</strong>. Meanwhile, <strong>${lowest.name}</strong> requires more academic support, currently averaging <strong>${lowest.avg}</strong>. Interventions are recommended.`;
+            msg += `with a high average GWA of <strong>${highest.avg}</strong>. Meanwhile, <strong>${lowest.name}</strong> has a lower average of <strong>${lowest.avg}</strong> and might need some extra help.`;
             insightText.innerHTML = msg;
         } else if (secArr.length === 1) {
             insightText.innerHTML = `<strong>${secArr[0].name}</strong> is performing well with an average GWA of <strong>${secArr[0].avg}</strong>. Keep up the good work!`;
