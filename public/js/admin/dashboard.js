@@ -15,7 +15,7 @@ function getStudentGradeNumber(s) {
     let m = secName.match(/\b([7-9]|1[0-2])\b/);
     if (m) return parseInt(m[1]);
     try {
-        const savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+        const savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
         const secData = savedSections.find(x => x.name.toUpperCase() === secName);
         if (secData && secData.year) {
             let m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
@@ -63,7 +63,7 @@ function getBaseDashboardStudents() {
                 }
                 // Check localStorage sections for grade level
                 try {
-                    const savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+                    const savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
                     const secData = savedSections.find(x => x.name === s.section);
                     if (secData && secData.year) {
                         const m = secData.year.match(/\b([7-9]|1[0-2])\b/);
@@ -83,7 +83,7 @@ function getBaseDashboardStudents() {
                 }
                 // Check localStorage sections for grade level
                 try {
-                    const savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+                    const savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
                     const secData = savedSections.find(x => x.name === s.section);
                     if (secData && secData.year) {
                         const m = secData.year.match(/\b([7-9]|1[0-2])\b/);
@@ -195,7 +195,7 @@ function updateModalGradeDropdown() {
     
     let savedSections = [];
     try {
-        savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+        savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
     } catch(e) {}
 
     curr.forEach(s => {
@@ -248,7 +248,7 @@ function updateModalSectionDropdown() {
 
     let savedSections = [];
     try {
-        savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+        savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
     } catch(e) {}
 
     if (modalGradeLevel !== 'All') {

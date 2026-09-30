@@ -41,13 +41,25 @@ function searchSections(val) {
 const SECTIONS_KEY = 'cnhs_sections';
 
 function _saveSections() {
-    localStorage.setItem(SECTIONS_KEY, JSON.stringify(_sections));
+    const rawData = JSON.stringify(_sections);
+    localStorage.setItem(SECTIONS_KEY, rawData);
+    if (typeof globalSettings !== 'undefined') globalSettings.cnhs_sections = rawData;
+    
+    // Sync to backend global settings so all devices are updated in real-time
+    fetch('/api/maintenance/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ cnhs_sections: rawData })
+    }).catch(e => console.error('Failed to sync sections to server:', e));
 }
 
 function _loadSections() {
     try {
-        const raw = localStorage.getItem(SECTIONS_KEY);
+        const raw = (typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem(SECTIONS_KEY);
         _sections = raw ? JSON.parse(raw) : [];
+        if (typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) {
+            localStorage.setItem(SECTIONS_KEY, globalSettings.cnhs_sections);
+        }
     } catch { _sections = []; }
 
     // Dynamically merge sections from the students database to sync across devices
@@ -273,6 +285,37 @@ function renderAssignSection(container) {
         '</div>' +
         '</div>' +
 
+        '<!-- Edit Section Modal -->' +
+        '<div id="edit-section-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">' +
+        '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 animate-scale-up">' +
+        '<h3 class="text-lg font-bold text-gray-800 mb-5">Edit Section</h3>' +
+        '<div class="space-y-4">' +
+        '<input type="hidden" id="edit-sec-id">' +
+        '<div>' +
+        '<label class="text-xs font-bold text-gray-500 uppercase block mb-1.5">Section Name</label>' +
+        '<input id="edit-sec-name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-primary bg-gray-50 outline-none transition" onkeypress="if(event.key===\'Enter\') saveEditSection()">' +
+        '</div>' +
+        '<div>' +
+        '<label class="text-xs font-bold text-gray-500 uppercase block mb-1.5">Year Level</label>' +
+        '<select id="edit-sec-year" onchange="toggleEditSectionStrandField()" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-primary bg-white">' +
+        '<option value="" disabled>-- Select Year Level --</option>' +
+        yearOptions.map(y => '<option value="' + y + '">' + y + '</option>').join('') +
+        '</select>' +
+        '</div>' +
+        '<div id="edit-sec-strand-wrap" class="hidden">' +
+        '<label class="text-xs font-bold text-gray-500 uppercase block mb-1.5">Strand / Track</label>' +
+        '<select id="edit-sec-strand" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-primary bg-white">' +
+        strandOptionsHtml +
+        '</select>' +
+        '</div>' +
+        '</div>' +
+        '<div class="flex gap-3 mt-6">' +
+        '<button onclick="saveEditSection()" class="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primaryDark transition">Update Section</button>' +
+        '<button onclick="closeEditSectionModal()" class="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Cancel</button>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+
         '<!-- AI Scan Modal for section student import -->' +
         '<div id="assign-scan-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">' +
         '<div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-scale-up">' +
@@ -371,6 +414,9 @@ function _buildSectionDetailPanel(sec) {
         '<p class="text-sm font-bold text-gray-400">' + enrolledTotalOptions + ' student' + (enrolledTotalOptions !== 1 ? 's' : '') + ' enrolled</p>' +
         '</div>' +
         '<div class="flex items-center gap-2">' +
+        '<button onclick="openEditSectionModal(\'' + sec.id + '\')" class="flex items-center gap-2.5 px-4 py-2.5 bg-gray-50 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-100 transition border border-gray-200 shadow-sm" title="Edit Section Level">' +
+        '<i class="fas fa-edit text-sm"></i> Edit' +
+        '</button>' +
         '<button onclick="printSectionMasterlist(\'' + sec.name + '\')" class="flex items-center gap-2.5 px-4 py-2.5 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-100 transition border border-blue-200 shadow-sm">' +
         '<i class="fas fa-print text-sm"></i> Print' +
         '</button>' +
@@ -512,6 +558,79 @@ function saveNewSection() {
     closeAddSectionModal();
     logActivity('Admin created section: ' + name + ' (' + year + ')');
     showMessage('Section "' + name + '" created.');
+    renderAssignSection(document.getElementById('content-area'));
+}
+
+function openEditSectionModal(id) {
+    const sec = _sections.find(s => s.id === id);
+    if (!sec) return;
+    document.getElementById('edit-sec-id').value = id;
+    document.getElementById('edit-sec-name').value = sec.name;
+    document.getElementById('edit-sec-year').value = sec.year || '';
+    const isSH = sec.year === 'Grade 11' || sec.year === 'Grade 12';
+    document.getElementById('edit-sec-strand-wrap').classList.toggle('hidden', !isSH);
+    if (isSH && sec.strand) document.getElementById('edit-sec-strand').value = sec.strand;
+    document.getElementById('edit-section-modal').classList.remove('hidden');
+}
+
+function closeEditSectionModal() {
+    document.getElementById('edit-section-modal').classList.add('hidden');
+}
+
+function toggleEditSectionStrandField() {
+    const year = document.getElementById('edit-sec-year').value;
+    const isSH = year === 'Grade 11' || year === 'Grade 12';
+    document.getElementById('edit-sec-strand-wrap').classList.toggle('hidden', !isSH);
+}
+
+function saveEditSection() {
+    const id = document.getElementById('edit-sec-id').value;
+    const name = (document.getElementById('edit-sec-name').value || '').trim();
+    const year = document.getElementById('edit-sec-year').value;
+    if (!name) return showMessage('Section name is required.', true);
+    if (!year) return showMessage('Please select a year level.', true);
+    
+    const existing = _sections.find(s => s.name.toLowerCase() === name.toLowerCase() && s.id !== id);
+    if (existing) {
+        return showMessage('A section with this name already exists.', true);
+    }
+    
+    const sec = _sections.find(s => s.id === id);
+    if (!sec) return;
+    
+    const oldName = sec.name;
+    const isSH = year === 'Grade 11' || year === 'Grade 12';
+    const strand = isSH ? (document.getElementById('edit-sec-strand').value || null) : null;
+    
+    sec.name = name;
+    sec.year = year;
+    sec.strand = strand;
+    
+    _saveSections();
+    closeEditSectionModal();
+    logActivity('Admin edited section: ' + name + ' (' + year + ')');
+    showMessage('Section "' + name + '" updated.');
+    
+    if (_selectedSection && _selectedSection.id === id) _selectedSection = sec;
+    
+    // If name changed, we should ideally update the section names of all students assigned to this section
+    if (oldName !== name && typeof students !== 'undefined') {
+        const toUpdate = students.filter(s => s.section === oldName);
+        if (toUpdate.length > 0) {
+            Promise.all(toUpdate.map(async (student) => {
+                student.section = name;
+                await fetch('/api/students/' + student.lrn, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(student)
+                });
+            })).then(() => {
+                renderAssignSection(document.getElementById('content-area'));
+            });
+            return;
+        }
+    }
+    
     renderAssignSection(document.getElementById('content-area'));
 }
 
