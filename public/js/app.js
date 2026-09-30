@@ -426,10 +426,11 @@ window.currentRecordQuarter = 1; // Track which quarter is active in the records
 
 // ATTENDANCE CONFIGURATION
 const ATT_MONTHS = [
+    { m: 'Aug', mIdx: 8, d: 22 }, { m: 'Sep', mIdx: 9, d: 21 },
     { m: 'Oct', mIdx: 10, d: 21 }, { m: 'Nov', mIdx: 11, d: 20 }, { m: 'Dec', mIdx: 12, d: 15 },
     { m: 'Jan', mIdx: 1, d: 22 }, { m: 'Feb', mIdx: 2, d: 19 }, { m: 'Mar', mIdx: 3, d: 21 },
     { m: 'Apr', mIdx: 4, d: 20 }, { m: 'May', mIdx: 5, d: 21 }, { m: 'Jun', mIdx: 6, d: 18 },
-    { m: 'July', mIdx: 7, d: 15 }
+    { m: 'Jul', mIdx: 7, d: 15 }
 ];
 
 // Add Student Table State

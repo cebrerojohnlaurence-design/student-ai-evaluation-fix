@@ -1525,8 +1525,13 @@ function savePinnedSections() {
 function renderMasterRecordsView(container) {
     loadPinnedSections();
     let teacherStudents = students;
-    if (currentUser.role === 'teacher' && currentUser.handledSections && currentUser.handledSections.length > 0) {
-        teacherStudents = students.filter(s => currentUser.handledSections.includes(s.section));
+    if (currentUser.role === 'teacher') {
+        const allowed = Array.from(new Set([...(currentUser.handledSections || []), ...(typeof pinnedSections !== 'undefined' ? pinnedSections : [])]));
+        if (allowed.length > 0) {
+            teacherStudents = students.filter(s => allowed.includes(s.section));
+        } else {
+            teacherStudents = [];
+        }
     }
 
     const rawSec = localStorage.getItem('cnhs_sections');
@@ -2131,8 +2136,13 @@ function filterRecordsTable() {
     const visibleSubjects = currentUser.role === 'teacher' ? (currentUser.subject ? currentUser.subject.split(',').map(s => s.trim()) : []) : resolveSubjectsForSection(currentRecordSection || 'All', students.filter(s => currentRecordSection === 'all' || s.section === currentRecordSection));
 
     let filtered = students;
-    if (currentUser.role === 'teacher' && currentUser.handledSections && currentUser.handledSections.length > 0) {
-        filtered = filtered.filter(s => currentUser.handledSections.includes(s.section));
+    if (currentUser.role === 'teacher') {
+        const allowed = Array.from(new Set([...(currentUser.handledSections || []), ...(typeof pinnedSections !== 'undefined' ? pinnedSections : [])]));
+        if (allowed.length > 0) {
+            filtered = filtered.filter(s => allowed.includes(s.section));
+        } else {
+            filtered = [];
+        }
     }
     if (currentRecordSection !== 'all') {
         if (currentRecordSection) {
@@ -2353,8 +2363,13 @@ async function saveManualGrades() {
 
     const savePromises = [];
     let filtered = students;
-    if (currentUser.role === 'teacher' && currentUser.handledSections) {
-        filtered = filtered.filter(s => currentUser.handledSections.includes(s.section));
+    if (currentUser.role === 'teacher') {
+        const allowed = Array.from(new Set([...(currentUser.handledSections || []), ...(typeof pinnedSections !== 'undefined' ? pinnedSections : [])]));
+        if (allowed.length > 0) {
+            filtered = filtered.filter(s => allowed.includes(s.section));
+        } else {
+            filtered = [];
+        }
     }
     if (currentRecordSection !== 'all') {
         filtered = filtered.filter(s => s.section === currentRecordSection);
