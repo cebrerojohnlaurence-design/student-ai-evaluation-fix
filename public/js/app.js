@@ -2140,11 +2140,13 @@ async function loadAcademicReport() {
 
                     <!-- RIGHT SIDE: STUDENT INFO -->
                     <div class="pl-4">
-                        <div class="text-center mb-6">
-                            <p class="text-[10px] font-bold">DepEd Form 138-A</p>
-                            <h1 class="text-sm font-bold mt-2">Republic of the Philippines</h1>
+                        <div class="text-center mb-6 relative">
+                            <img src="/img/logo.png" class="absolute left-0 top-0 h-16 w-16 object-contain" alt="School Logo">
+                            <img src="/img/kagawaran ng education logo.png" class="absolute right-0 top-0 h-16 w-16 object-contain" alt="DepEd Logo">
+                            <p class="text-[10px] font-bold pt-1">DepEd Form 138-A</p>
+                            <h1 class="text-sm font-bold mt-1">Republic of the Philippines</h1>
                             <p class="text-[10px]">Department of Education</p>
-                            <p class="text-[11px] font-bold mt-2 uppercase">City National High School</p>
+                            <p class="text-[11px] font-bold mt-1 uppercase">City National High School</p>
                         </div>
 
                         <div class="mt-6 space-y-3 text-[10px]">
@@ -2156,11 +2158,11 @@ async function loadAcademicReport() {
 
                         <div class="mt-20 grid grid-cols-2 gap-4 text-center text-[10px]">
                             <div class="space-y-1">
-                                <div class="border-b border-black pt-8"></div>
+                                <div class="pt-8 mb-1"><p class="font-bold border-b border-black pb-1 truncate">${s.adviser || 'Pending Assignment'}</p></div>
                                 <p class="font-bold">Class Adviser</p>
                             </div>
                             <div class="space-y-1">
-                                <div class="border-b border-black pt-8"></div>
+                                <div class="pt-8 mb-1"><p class="font-bold border-b border-black pb-1 truncate">${window.globalSettings?.principal_name || 'Principal Name'}</p></div>
                                 <p class="font-bold">Principal</p>
                             </div>
                         </div>
