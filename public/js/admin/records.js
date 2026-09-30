@@ -632,7 +632,7 @@ function renderAdviserSectionStudents(container) {
                     <div>
                         <h3 class="font-bold text-gray-800 text-base">${sec} — Student Records</h3>
                         <p class="text-xs text-amber-600 font-semibold mt-0.5">
-                            <i class="fas fa-edit mr-1"></i>Adviser view — all subjects visible. You may override grades.
+                            <i class="fas fa-eye mr-1"></i>Adviser view — all subjects visible.
                         </p>
                     </div>
                     <!-- Right side top bar -->
@@ -669,10 +669,7 @@ function renderAdviserSectionStudents(container) {
                         <button onclick="document.getElementById('qr-scan-modal').classList.remove('hidden')" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold uppercase shadow-sm transition">
                             <i class="fas fa-qrcode mr-1"></i>Scan QR
                         </button>
-                        <button onclick="openGradesModal(true)"
-                            class="px-4 py-2 bg-primary text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-primaryDark transition">
-                            <i class="fas fa-edit mr-1"></i>Override Grades
-                        </button>
+                        
                     </div>
                 </div>
                 <div class="overflow-auto flex-1">
@@ -1409,10 +1406,7 @@ function renderAdminSectionStudents(container) {
                                 class="px-4 py-2 bg-purple-500 text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-purple-600 transition">
                             <i class="fas fa-print mr-1"></i>Print Report
                         </button>
-                        <button onclick="openGradesModal()"
-                            class="px-4 py-2 bg-primary text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-primaryDark transition">
-                            <i class="fas fa-edit mr-1"></i>Override Grades
-                        </button>
+                        
                     </div>
                 </div>
 
