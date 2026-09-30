@@ -49,6 +49,7 @@ class StudentSubjectController extends Controller
             return response()->json([
                 'student_name' => $student->name,
                 'section'      => $student->section,
+                'attendance'   => $student->attendance,
                 'enrollment_history' => is_string($student->enrollment_history) ? json_decode($student->enrollment_history, true) : $student->enrollment_history,
                 'subjects' => $rows
             ]);

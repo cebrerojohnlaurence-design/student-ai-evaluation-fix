@@ -415,20 +415,40 @@ async function renderEnrolledGrades() {
                 if (totalMarks > 0) {
                     const pct = ((presentMarks / totalMarks) * 100).toFixed(2);
                     document.getElementById('student-attendance').innerText = pct;
-                } else if (window.studentData && window.studentData.attendance > 0) {
-                    // Fallback to the precomputed DB value if calculation somehow fails or yields 0 totalMarks
+                } else if (window.studentData && window.studentData.attendance !== null && window.studentData.attendance !== undefined) {
                     document.getElementById('student-attendance').innerText = parseFloat(window.studentData.attendance).toFixed(2);
                 } else {
-                    document.getElementById('student-attendance').innerText = "--"; 
+                    // ULTIMATE FALLBACK: fetch directly from the main students API where we know it works
+                    fetch('/api/students')
+                        .then(res => res.json())
+                        .then(allStudents => {
+                            const me = allStudents.find(s => s.lrn === lrn);
+                            if (me && me.attendance !== null && me.attendance !== undefined && parseFloat(me.attendance) >= 0) {
+                                document.getElementById('student-attendance').innerText = parseFloat(me.attendance).toFixed(2);
+                            } else {
+                                document.getElementById('student-attendance').innerText = "--";
+                            }
+                        })
+                        .catch(() => {
+                            document.getElementById('student-attendance').innerText = "--"; 
+                        });
                 }
             })
             .catch((err) => {
                 console.error("Attendance fetch error:", err);
-                if (window.studentData && window.studentData.attendance > 0) {
-                    document.getElementById('student-attendance').innerText = parseFloat(window.studentData.attendance).toFixed(2);
-                } else {
-                    document.getElementById('student-attendance').innerText = "--";
-                }
+                fetch('/api/students')
+                    .then(res => res.json())
+                    .then(allStudents => {
+                        const me = allStudents.find(s => s.lrn === lrn);
+                        if (me && me.attendance !== null && me.attendance !== undefined && parseFloat(me.attendance) >= 0) {
+                            document.getElementById('student-attendance').innerText = parseFloat(me.attendance).toFixed(2);
+                        } else {
+                            document.getElementById('student-attendance').innerText = "--";
+                        }
+                    })
+                    .catch(() => {
+                        document.getElementById('student-attendance').innerText = "--"; 
+                    });
             });
     }
 }
