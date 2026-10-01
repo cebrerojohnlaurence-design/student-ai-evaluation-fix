@@ -19,6 +19,12 @@ async function fetchSettings() {
         if (data.settings) {
             globalSettings = data.settings;
 
+            if (globalSettings.system_max_scores) {
+                try {
+                    maxScores = JSON.parse(globalSettings.system_max_scores);
+                    localStorage.setItem('system_max_scores', globalSettings.system_max_scores);
+                } catch(e) {}
+            }
             // Apply global settings to UI immediately upon fetching
 
             // 1. Sidebar App Name
@@ -60,8 +66,8 @@ async function fetchSettings() {
 }
 
 const coreSubjects = ['Business Math', 'Science', 'English', 'Filipino', 'A.P.', 'MAPEH'];
-let MAX_WW = parseInt(localStorage.getItem('system_max_ww')) || 5;
-let MAX_PT = parseInt(localStorage.getItem('system_max_pt')) || 5;
+let MAX_WW = parseInt(localStorage.getItem('system_max_ww')) || 10;
+let MAX_PT = parseInt(localStorage.getItem('system_max_pt')) || 10;
 
 // --- DepEd Grading Helpers ---
 function getTransmutedGrade(percent) {
@@ -182,7 +188,13 @@ try {
 }
 
 function saveMaxScores() {
-    localStorage.setItem('system_max_scores', JSON.stringify(maxScores));
+    const jsonStr = JSON.stringify(maxScores);
+    localStorage.setItem('system_max_scores', jsonStr);
+    fetch('/api/maintenance/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ system_max_scores: jsonStr })
+    }).catch(e => console.error(e));
 }
 
 let students = [];
@@ -1030,7 +1042,7 @@ async function processAI() {
             } else {
                 extraContext = ` Please carefully analyze the data and extract the requested information according to the format instructions above.`;
             }
-            const excelPrompt = prompt + `\n\nHere is the data extracted from the sheet '${targetSheetName}' of the uploaded Excel file.${extraContext}\n\n` + dataString;
+            const excelPrompt = prompt + `\n\nIMPORTANT: Return ONLY a valid JSON array. DO NOT return markdown blocks, DO NOT say 'Here is the data'. JUST the raw JSON array. \n\nHere is the data extracted from the sheet '${targetSheetName}' of the uploaded Excel file.${extraContext}\n\n` + dataString;
             resText = await callGemini(excelPrompt, null);
         } else {
             resText = await callGemini(prompt, base64Image);
@@ -1044,6 +1056,8 @@ async function processAI() {
         const endIdx = cleanRes.lastIndexOf(']');
         if (startIdx !== -1 && endIdx !== -1) {
             cleanRes = cleanRes.substring(startIdx, endIdx + 1);
+        } else {
+            throw new Error("No JSON array found in AI response. (Try again or check format)");
         }
 
         data = JSON.parse(cleanRes);
@@ -1272,7 +1286,7 @@ async function processAI() {
         closeCameraModal();
     } catch (e) {
         console.error(e);
-        showMessage("AI failed to read document or API connection failed. Check console.", true);
+        showMessage("AI Error: " + e.message, true);
         document.getElementById('process-btn').disabled = false;
         document.getElementById('processing-status').classList.add('hidden');
     }
