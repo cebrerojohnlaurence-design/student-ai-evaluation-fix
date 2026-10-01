@@ -536,3 +536,157 @@ async function saveQrPin() {
 
 
 
+
+function openStudentAttendanceModal() {
+    const attendance = window.studentData?.attendance > 0 ? parseFloat(window.studentData.attendance).toFixed(2) : '--';
+    let statusText = 'Excellent';
+    let statusColor = '#10b981'; // Green
+    
+    if (attendance !== '--') {
+        const attNum = parseFloat(attendance);
+        if (attNum < 85) {
+            statusText = 'Needs Improvement';
+            statusColor = '#ef4444'; // Red
+        } else if (attNum < 95) {
+            statusText = 'Good';
+            statusColor = '#f59e0b'; // Yellow
+        }
+    }
+
+    Swal.fire({
+        title: 'Attendance Record',
+        html: \
+            <div class="mt-4 flex flex-col items-center">
+                <div class="relative w-40 h-40 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f3f4f6" stroke-width="8"></circle>
+                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="\" stroke-width="8"
+                            stroke-dasharray="251.2" stroke-dashoffset="\" 
+                            class="transition-all duration-1000 ease-out"></circle>
+                    </svg>
+                    <div class="absolute flex flex-col items-center justify-center">
+                        <span class="text-3xl font-black text-gray-800">\%</span>
+                        <span class="text-[10px] font-bold text-gray-400 tracking-wider">PRESENT</span>
+                    </div>
+                </div>
+                <div class="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100 w-full max-w-sm">
+                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Current Status</h4>
+                    <span class="inline-block px-4 py-2 rounded-full text-white font-bold text-sm shadow-sm" style="background-color: \">
+                        \
+                    </span>
+                    <p class="text-xs text-gray-400 mt-3 font-medium">Keep your attendance above 95% to maintain a good standing and ensure you don't miss out on important lessons!</p>
+                </div>
+            </div>
+        \,
+        showConfirmButton: true,
+        confirmButtonText: 'Close',
+        confirmButtonColor: '#166534',
+        customClass: {
+            popup: 'rounded-3xl',
+            confirmButton: 'rounded-xl px-6 py-2 shadow-md'
+        }
+    });
+}
+
+function openAcademicModal() {
+    if (!window.studentData || !window.studentData.subjects || window.studentData.subjects.length === 0) {
+        Swal.fire({
+            icon: 'info',
+            title: 'No Data Yet',
+            text: 'You don\\'t have enough grades to generate academic insights right now.',
+            confirmButtonColor: '#166534',
+            customClass: { popup: 'rounded-3xl' }
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'AI Academic Analysis',
+        html: \
+            <div class="flex flex-col items-center justify-center py-6" id="ai-insight-loading">
+                <i class="fas fa-brain fa-3x text-accent fa-beat mb-4"></i>
+                <p class="text-sm font-bold text-gray-600 animate-pulse">Analyzing your grades...</p>
+                <p class="text-xs text-gray-400 mt-1">Generating personalized insights</p>
+            </div>
+        \,
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        customClass: { popup: 'rounded-3xl' },
+        didOpen: () => {
+            setTimeout(() => {
+                const subjects = window.studentData.subjects.filter(s => parseFloat(s.g) > 0);
+                if (subjects.length === 0) {
+                    Swal.update({
+                        html: '<div class="py-4 text-gray-500">Not enough graded subjects to analyze.</div>',
+                        showConfirmButton: true,
+                        confirmButtonText: 'Close',
+                        confirmButtonColor: '#166534'
+                    });
+                    return;
+                }
+
+                // Simple client-side generation for the AI insight
+                let highest = subjects[0];
+                let lowest = subjects[0];
+                let sum = 0;
+
+                subjects.forEach(s => {
+                    const grade = parseFloat(s.g);
+                    sum += grade;
+                    if (grade > parseFloat(highest.g)) highest = s;
+                    if (grade < parseFloat(lowest.g)) lowest = s;
+                });
+
+                const gwa = (sum / subjects.length).toFixed(2);
+                let message = "";
+                let tip = "";
+
+                if (gwa >= 90) {
+                    message = "Excellent work! You are performing at an outstanding level. Keep up the great study habits.";
+                    tip = \You're doing great across the board, but keep pushing yourself in \ to achieve perfection!\;
+                } else if (gwa >= 80) {
+                    message = "You are doing well, but there is room for improvement to reach the honor roll.";
+                    tip = \Consider allocating an extra 30 minutes of study time for \ each day.\;
+                } else {
+                    message = "Your academic status is currently at risk. It is highly recommended to seek consultation with your teachers.";
+                    tip = \Please focus heavily on \ (\) to avoid failing marks this quarter.\;
+                }
+
+                const htmlContent = \
+                    <div class="text-left mt-2">
+                        <div class="bg-blue-50/50 border border-blue-100 p-4 rounded-2xl mb-4 relative overflow-hidden">
+                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-200 rounded-full blur-2xl opacity-40"></div>
+                            <h4 class="text-xs font-bold text-blue-800 uppercase tracking-widest mb-1 relative z-10"><i class="fas fa-chart-line mr-1"></i> Performance Overview</h4>
+                            <p class="text-sm text-gray-700 relative z-10">\</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="bg-green-50/50 border border-green-100 p-3 rounded-2xl">
+                                <span class="text-[10px] font-bold text-green-600 uppercase block mb-1">Strongest Subject</span>
+                                <span class="text-sm font-bold text-gray-800 block">\</span>
+                                <span class="text-xl font-black text-green-700">\</span>
+                            </div>
+                            <div class="bg-red-50/50 border border-red-100 p-3 rounded-2xl">
+                                <span class="text-[10px] font-bold text-red-600 uppercase block mb-1">Focus Area</span>
+                                <span class="text-sm font-bold text-gray-800 block">\</span>
+                                <span class="text-xl font-black text-red-700">\</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-accent/10 border border-accent/20 p-4 rounded-2xl">
+                            <h4 class="text-xs font-bold text-yellow-800 uppercase tracking-widest mb-1"><i class="fas fa-lightbulb mr-1"></i> AI Recommendation</h4>
+                            <p class="text-sm text-gray-700 italic">\</p>
+                        </div>
+                    </div>
+                \;
+
+                Swal.update({
+                    html: htmlContent,
+                    showConfirmButton: true,
+                    confirmButtonText: 'Got it!',
+                    confirmButtonColor: '#166534'
+                });
+            }, 1500); // Simulate AI loading time
+        }
+    });
+}

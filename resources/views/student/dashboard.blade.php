@@ -187,9 +187,10 @@
                 </div>
 
                 <!-- Academic Risk -->
-                <div
-                    class="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col justify-center"
+                <div onclick="openAcademicModal()"
+                    class="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col justify-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group"
                 >
+                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <h3
                         class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1"
                     >
@@ -216,9 +217,10 @@
                 </div>
 
                 <!-- Attendance -->
-                <div
-                    class="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col justify-center"
+                <div onclick="openStudentAttendanceModal()"
+                    class="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col justify-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group"
                 >
+                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <h3
                         class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1"
                     >

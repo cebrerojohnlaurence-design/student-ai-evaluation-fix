@@ -1478,11 +1478,11 @@ function renderAdminSectionStudents(container) {
                                         <td class="static-cell font-mono text-gray-400 text-[10px] border-r border-gray-100">${s.lrn}</td>
                                         ${subCols}
                                         <td class="static-cell font-bold text-primary bg-blue-50/30 border-l-2 border-blue-200">${s.gwa > 0 ? s.gwa : '-'}</td>
-                                        <td class="static-cell text-gray-600 cursor-pointer hover:bg-green-50 font-bold transition group" 
-                                            onclick="openAttendanceModal('${s.lrn}')" title="Click to manage attendance">
+                                        <td class="static-cell ${currentUser.role === 'teacher' ? 'text-gray-600 cursor-pointer hover:bg-green-50 font-bold transition group' : 'text-gray-600 font-bold'}" 
+                                            ${currentUser.role === 'teacher' ? `onclick="openAttendanceModal('${s.lrn}')" title="Click to manage attendance"` : ''}>
                                             <div class="flex items-center justify-center gap-1">
                                                 <span>${s.attendance > 0 ? s.attendance + '%' : '-'}</span>
-                                                <i class="fas fa-edit text-[8px] opacity-0 group-hover:opacity-100 transition"></i>
+                                                ${currentUser.role === 'teacher' ? `<i class="fas fa-edit text-[8px] opacity-0 group-hover:opacity-100 transition"></i>` : ''}
                                             </div>
                                         </td>
                                         <td class="static-cell">${badge}</td>
@@ -1491,10 +1491,12 @@ function renderAdminSectionStudents(container) {
                                                 class="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-100 transition border border-blue-100" title="Report Card">
                                                 <i class="fas fa-print"></i>
                                             </button>
+                                            ${currentUser.role === 'teacher' ? `
                                             <button onclick="openAttendanceModal('${s.lrn}')"
                                                 class="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-[10px] font-bold hover:bg-green-100 transition border border-green-100" title="Manage Attendance">
                                                 <i class="fas fa-calendar-check text-[10px]"></i>
                                             </button>
+                                            ` : ''}
                                         </td>
                                     </tr>
                                     `;
@@ -1892,7 +1894,9 @@ function renderDetailedSubjectView(container, subject) {
     const visiblePinnedSections = pinnedSections.filter(sec => yearSections.includes(sec));
     const unpinned = yearSections.filter(s => !visiblePinnedSections.includes(s));
 
-    if (currentRecordSection === 'all' && currentUser.role === 'teacher') {
+    if (adminSelectedSection && adminSelectedSection !== 'all') {
+        currentRecordSection = adminSelectedSection;
+    } else if (currentRecordSection === 'all' && currentUser.role === 'teacher') {
         currentRecordSection = visiblePinnedSections.length > 0 ? visiblePinnedSections[0] : (yearSections.length > 0 ? yearSections[0] : null);
     }
 
@@ -1986,6 +1990,8 @@ function renderDetailedSubjectView(container, subject) {
                                    onkeyup="searchRecordsTable(this.value)" placeholder="Search..."
                                    class="pl-8 pr-2 py-1.5 border-0 rounded-lg text-[10px] outline-none bg-white/90 text-gray-800 w-36">
                         </div>
+                        </div>
+                        ${currentUser.role === 'teacher' ? `
                         <button onclick="saveManualGrades()"
                                 class="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-blue-600 transition">
                             <i class="fas fa-save mr-1"></i>Save Grades
@@ -1994,6 +2000,7 @@ function renderDetailedSubjectView(container, subject) {
                                 class="px-3 py-1.5 bg-accent text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-yellow-600 transition">
                             <i class="fas fa-camera mr-1"></i>Scan Record
                         </button>
+                        ` : ''}
                         <button onclick="printReport('${subject} E-Class Record - Q${window.currentRecordQuarter || 1}')"
                                 class="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-purple-600 transition">
                             <i class="fas fa-print mr-1"></i>Print Grades
@@ -2180,14 +2187,14 @@ function filterRecordsTable() {
             for (let i = 1; i <= MAX_WW; i++) {
                 wwInputs += `<td class="bg-blue-50/10 hover:bg-blue-100 transition-colors">
             <input type="number" class="excel-input" value="${subData['ww' + i] || ''}" placeholder="-"
-                oninput="updateInlineScore(this, '${s.lrn}', 'ww${i}', '${currentSubjectView}')">
+                oninput="updateInlineScore(this, '${s.lrn}', 'ww${i}', '${currentSubjectView}')" ${currentUser.role !== 'teacher' ? 'readonly disabled' : ''}>
             </td>`;
             }
             let ptInputs = '';
             for (let i = 1; i <= MAX_PT; i++) {
                 ptInputs += `<td class="bg-green-50/10 hover:bg-green-100 transition-colors">
             <input type="number" class="excel-input" value="${subData['pt' + i] || ''}" placeholder="-"
-                oninput="updateInlineScore(this, '${s.lrn}', 'pt${i}', '${currentSubjectView}')">
+                oninput="updateInlineScore(this, '${s.lrn}', 'pt${i}', '${currentSubjectView}')" ${currentUser.role !== 'teacher' ? 'readonly disabled' : ''}>
             </td>`;
             }
 
