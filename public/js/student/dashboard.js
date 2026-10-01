@@ -384,12 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('student-attendance').innerText = "--";
         }
     }
+});
 
     // --- Profile Upload Logic ---
     function triggerProfileUpload() {
-        document.getElementById('profile-upload-input').click(
+        document.getElementById('profile-upload-input').click();
+    }
 
-            async function handleProfileUpload(input) {
+    async function handleProfileUpload(input) {
                 if (!input.files || !input.files[0]) return;
 
                 const file = input.files[0];
