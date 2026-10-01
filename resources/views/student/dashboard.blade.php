@@ -410,34 +410,87 @@
     </div>
 
     <!-- Attendance Modal -->
-    <div id="attendance-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-gray-100">
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50/50">
-                <h3 class="text-lg font-bold text-blue-800 flex items-center gap-2"><i class="fas fa-calendar-check text-blue-500"></i> Attendance Summary</h3>
-                <button onclick="closeAttendanceModal()" class="text-gray-400 hover:text-red-500 transition w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50"><i class="fas fa-times"></i></button>
+    <div id="attendance-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-md p-4 animate-fade-in">
+        <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-up border border-gray-100 flex flex-col relative">
+            <!-- Decorative Header Background -->
+            <div class="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-blue-600 to-blue-800 z-0"></div>
+            
+            <div class="p-6 flex justify-between items-start relative z-10">
+                <div class="text-white">
+                    <h3 class="text-2xl font-black tracking-tight drop-shadow-sm flex items-center gap-2">
+                        <i class="fas fa-calendar-alt text-blue-200"></i> Attendance Overview
+                    </h3>
+                    <p class="text-blue-100 text-xs font-medium mt-1 tracking-wider uppercase">School Year 2023-2024</p>
+                </div>
+                <button onclick="closeAttendanceModal()" class="text-white/70 hover:text-white bg-black/10 hover:bg-black/20 backdrop-blur-md transition w-10 h-10 flex items-center justify-center rounded-full">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
             </div>
-            <div class="p-8 bg-white flex flex-col items-center">
-                <div class="relative w-48 h-48 mb-6">
-                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="40" stroke="#f1f5f9" stroke-width="12" fill="none" />
-                        <circle id="attendance-circle" cx="50" cy="50" r="40" stroke="#3b82f6" stroke-width="12" fill="none" stroke-dasharray="251.2" stroke-dashoffset="0" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
-                    </svg>
-                    <div class="absolute inset-0 flex flex-col items-center justify-center">
-                        <span id="modal-attendance-percent" class="text-4xl font-black text-gray-800">--%</span>
-                        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Rate</span>
+            
+            <div class="p-8 pt-2 bg-transparent relative z-10">
+                <div class="bg-white rounded-3xl shadow-xl p-6 border border-gray-100 mb-6">
+                    <div class="flex flex-col md:flex-row items-center gap-8">
+                        <!-- Left: Circular Chart -->
+                        <div class="relative w-40 h-40 flex-shrink-0">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                <!-- Gradient definition -->
+                                <defs>
+                                    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#3b82f6" />
+                                        <stop offset="100%" stop-color="#1d4ed8" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="50" cy="50" r="40" stroke="#f1f5f9" stroke-width="10" fill="none" />
+                                <circle id="attendance-circle" cx="50" cy="50" r="40" stroke="url(#blueGradient)" stroke-width="10" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="modal-attendance-percent" class="text-4xl font-black text-gray-800 tracking-tighter">--%</span>
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Overall Rate</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Right: Stats -->
+                        <div class="flex-grow w-full space-y-3">
+                            <div class="bg-gradient-to-r from-green-50 to-green-100/50 rounded-2xl p-4 flex justify-between items-center border border-green-100 shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-green-200/50 text-green-600 flex items-center justify-center"><i class="fas fa-check"></i></div>
+                                    <div>
+                                        <p class="text-xs font-bold text-green-700 uppercase tracking-widest">Total Present</p>
+                                        <p class="text-[10px] text-green-600/70 font-medium">Days attended</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p id="modal-days-present" class="text-2xl font-black text-green-700">--</p>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gradient-to-r from-red-50 to-red-100/50 rounded-2xl p-4 flex justify-between items-center border border-red-100 shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-red-200/50 text-red-500 flex items-center justify-center"><i class="fas fa-times"></i></div>
+                                    <div>
+                                        <p class="text-xs font-bold text-red-700 uppercase tracking-widest">Total Absent</p>
+                                        <p class="text-[10px] text-red-600/70 font-medium">Days missed</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p id="modal-days-absent" class="text-2xl font-black text-red-700">--</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="grid grid-cols-2 gap-4 w-full">
-                    <div class="bg-green-50 rounded-2xl p-4 text-center border border-green-100">
-                        <p class="text-xs font-bold text-green-500 uppercase tracking-widest mb-1">Present</p>
-                        <p id="modal-days-present" class="text-3xl font-black text-green-700">--</p>
-                        <p class="text-[10px] text-green-600/60 font-bold uppercase mt-1">Days</p>
+
+                <!-- Monthly Breakdown Simulation -->
+                <div class="bg-white rounded-3xl p-6 border border-gray-100">
+                    <h4 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-chart-bar text-gray-400"></i> Monthly Distribution
+                    </h4>
+                    
+                    <div id="monthly-attendance-bars" class="flex items-end justify-between h-32 gap-1 w-full pb-2 border-b border-gray-100">
+                        <!-- Bars will be injected by JS -->
                     </div>
-                    <div class="bg-red-50 rounded-2xl p-4 text-center border border-red-100">
-                        <p class="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Absent</p>
-                        <p id="modal-days-absent" class="text-3xl font-black text-red-700">--</p>
-                        <p class="text-[10px] text-red-600/60 font-bold uppercase mt-1">Days</p>
+                    <div id="monthly-attendance-labels" class="flex justify-between w-full mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                        <!-- Labels injected by JS -->
                     </div>
                 </div>
             </div>

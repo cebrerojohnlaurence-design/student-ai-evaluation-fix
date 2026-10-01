@@ -539,44 +539,117 @@ async function saveQrPin() {
 
 // --- Dynamic Modals Logic ---
 function openAttendanceModal() {
-                document.getElementById('attendance-modal').classList.remove('hidden');
+    document.getElementById('attendance-modal').classList.remove('hidden');
 
-                // Simulate present/absent from the percentage
-                let att = 0;
-                if (window.studentData && window.studentData.attendance) {
-                    att = parseFloat(window.studentData.attendance);
-                }
+    // Simulate present/absent from the percentage
+    let att = 0;
+    if (window.studentData && window.studentData.attendance) {
+        att = parseFloat(window.studentData.attendance);
+    }
 
-                if (att > 0) {
-                    const totalDays = 205; // Standard school days in a year
-                    const present = Math.round((att / 100) * totalDays);
-                    const absent = totalDays - present;
+    if (att > 0) {
+        const totalDays = 205; // Standard school days in a year
+        const present = Math.round((att / 100) * totalDays);
+        const absent = totalDays - present;
 
-                    document.getElementById('modal-attendance-percent').innerText = att.toFixed(0) + '%';
-                    document.getElementById('modal-days-present').innerText = present;
-                    document.getElementById('modal-days-absent').innerText = absent;
+        document.getElementById('modal-attendance-percent').innerText = att.toFixed(0) + '%';
+        document.getElementById('modal-days-present').innerText = present;
+        document.getElementById('modal-days-absent').innerText = absent;
 
-                    // Animate the circle
-                    setTimeout(() => {
-                        const circle = document.getElementById('attendance-circle');
-                        if (circle) {
-                            const circumference = 251.2; // 2 * pi * r (r=40)
-                            const offset = circumference - (att / 100) * circumference;
-                            circle.style.strokeDashoffset = offset;
+        // Animate the circle
+        setTimeout(() => {
+            const circle = document.getElementById('attendance-circle');
+            if (circle) {
+                const circumference = 251.2; // 2 * pi * r (r=40)
+                const offset = circumference - (att / 100) * circumference;
+                circle.style.strokeDashoffset = offset;
 
-                            if (att >= 90) circle.setAttribute('stroke', '#10b981'); // Green
-                            else if (att >= 75) circle.setAttribute('stroke', '#f59e0b'); // Yellow
-                            else circle.setAttribute('stroke', '#ef4444'); // Red
-                        }
-                    }, 100);
-                }
+                if (att >= 95) circle.setAttribute('stroke', '#10b981'); // Green
+                else if (att >= 85) circle.setAttribute('stroke', '#3b82f6'); // Blue
+                else if (att >= 75) circle.setAttribute('stroke', '#f59e0b'); // Yellow
+                else circle.setAttribute('stroke', '#ef4444'); // Red
             }
+        }, 100);
+
+        // Generate Monthly Breakdown (Simulation for UI)
+        const months = ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+        const daysPerMonth = [20, 21, 22, 20, 15, 21, 20, 22, 21, 23];
+        
+        let remainingAbsences = absent;
+        const monthlyAbsences = new Array(10).fill(0);
+        
+        // Randomly distribute absences
+        while (remainingAbsences > 0) {
+            let m = Math.floor(Math.random() * 10);
+            if (monthlyAbsences[m] < daysPerMonth[m]) {
+                monthlyAbsences[m]++;
+                remainingAbsences--;
+            }
+        }
+
+        const barsContainer = document.getElementById('monthly-attendance-bars');
+        const labelsContainer = document.getElementById('monthly-attendance-labels');
+        
+        if (barsContainer && labelsContainer) {
+            barsContainer.innerHTML = '';
+            labelsContainer.innerHTML = '';
+
+            months.forEach((month, index) => {
+                const totalM = daysPerMonth[index];
+                const absM = monthlyAbsences[index];
+                const presM = totalM - absM;
+                const percentM = (presM / totalM) * 100;
+                
+                let barColor = 'bg-blue-500';
+                if (percentM >= 95) barColor = 'bg-green-500';
+                else if (percentM < 75) barColor = 'bg-red-400';
+                else if (percentM < 85) barColor = 'bg-yellow-400';
+
+                // Bar wrapper
+                const barWrapper = document.createElement('div');
+                barWrapper.className = 'w-full flex flex-col justify-end items-center h-full group relative';
+                
+                // Tooltip
+                const tooltip = document.createElement('div');
+                tooltip.className = 'absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-[10px] py-1 px-2 rounded font-medium whitespace-nowrap z-50 pointer-events-none';
+                tooltip.innerText = `${presM}/${totalM} Days`;
+                
+                // Actual bar
+                const bar = document.createElement('div');
+                bar.className = `w-4 sm:w-6 rounded-t-sm transition-all duration-1000 ease-out ${barColor} shadow-sm`;
+                bar.style.height = '0%'; // Start at 0 for animation
+
+                // Label
+                const label = document.createElement('div');
+                label.className = 'w-full text-center truncate';
+                label.innerText = month;
+
+                barWrapper.appendChild(tooltip);
+                barWrapper.appendChild(bar);
+                barsContainer.appendChild(barWrapper);
+                labelsContainer.appendChild(label);
+
+                // Animate bar height
+                setTimeout(() => {
+                    bar.style.height = `${percentM}%`;
+                }, 100 + (index * 50));
+            });
+        }
+    }
+}
 
 function closeAttendanceModal() {
-                document.getElementById('attendance-modal').classList.add('hidden');
-                const circle = document.getElementById('attendance-circle');
-                if (circle) circle.style.strokeDashoffset = 251.2; // reset
-            }
+    document.getElementById('attendance-modal').classList.add('hidden');
+    const circle = document.getElementById('attendance-circle');
+    if (circle) circle.style.strokeDashoffset = 251.2; // reset
+    
+    // Reset bars
+    const barsContainer = document.getElementById('monthly-attendance-bars');
+    if (barsContainer) {
+        const bars = barsContainer.querySelectorAll('.rounded-t-sm');
+        bars.forEach(b => b.style.height = '0%');
+    }
+}
 
 function openAcademicStatusModal() {
                 document.getElementById('academic-modal').classList.remove('hidden');
