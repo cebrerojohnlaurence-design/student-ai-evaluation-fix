@@ -619,7 +619,7 @@ function saveEditSection() {
         if (toUpdate.length > 0) {
             Promise.all(toUpdate.map(async (student) => {
                 student.section = name;
-                await fetch('/api/students/' + student.lrn, {
+                await fetch('/api/students/' + student.id, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify(student)
@@ -638,10 +638,32 @@ function deleteSection(id) {
     const sec = _sections.find(s => s.id === id);
     if (!sec) return;
     openConfirmModal('Delete Section', 'Delete section "' + sec.name + '"? Students will be unassigned.', () => {
+        const secName = sec.name;
         _sections = _sections.filter(s => s.id !== id);
         _saveSections();
         if (_selectedSection && _selectedSection.id === id) _selectedSection = null;
-        logActivity('Admin deleted section: ' + sec.name);
+        logActivity('Admin deleted section: ' + secName);
+        
+        // Remove section from all assigned students in DB
+        if (typeof students !== 'undefined') {
+            const toUpdate = students.filter(s => s.section === secName);
+            if (toUpdate.length > 0) {
+                showMessage('Unassigning students...');
+                Promise.all(toUpdate.map(async (student) => {
+                    student.section = null;
+                    await fetch('/api/students/' + student.id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify(student)
+                    });
+                })).then(() => {
+                    showMessage('Section removed and students unassigned.');
+                    renderAssignSection(document.getElementById('content-area'));
+                });
+                return;
+            }
+        }
+        
         showMessage('Section removed.');
         renderAssignSection(document.getElementById('content-area'));
     });

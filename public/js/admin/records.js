@@ -291,11 +291,11 @@ function promptAddAdviserSection() {
                 let m = sd.year.match(/\b([7-9]|1[0-2])\b/);
                 if (m) return 'Grade ' + m[1];
             }
-        } catch(e){}
+        } catch (e) { }
         return 'Unknown';
     };
 
-    const allAvailableGrades = Array.from(new Set(availableSections.map(s => getGrade(s)).filter(g => g !== 'Unknown'))).sort((a,b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+    const allAvailableGrades = Array.from(new Set(availableSections.map(s => getGrade(s)).filter(g => g !== 'Unknown'))).sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
 
     let listHTML = '';
     if (jhsSections.length === 0 && shsSections.length === 0) {
@@ -374,7 +374,7 @@ function promptAddAdviserSection() {
         document.querySelectorAll('.adviser-section-option').forEach(el => {
             const text = el.innerText.toLowerCase();
             const g = el.getAttribute('data-grade');
-            
+
             const matchQ = text.includes(q);
             const matchF = (f === 'All' || g === f);
 
@@ -520,7 +520,7 @@ function renderAdviserSectionStudents(container) {
         const isSHS = sec.toLowerCase().includes('grade 11') || sec.toLowerCase().includes('grade 12') || sec.toLowerCase().includes('gr 11') || sec.toLowerCase().includes('gr 12');
         const level = isSHS ? 'SH' : 'JH';
         let gradeNum = 7;
-        if (typeof getStudentGradeNumber === 'function') gradeNum = getStudentGradeNumber(secStudents.length > 0 ? secStudents[0] : {section: sec}) || 7;
+        if (typeof getStudentGradeNumber === 'function') gradeNum = getStudentGradeNumber(secStudents.length > 0 ? secStudents[0] : { section: sec }) || 7;
         dynamicSubjects = getSubjectsForReport(level, null, gradeNum, window.currentRecordSemester || 1);
     }
     if (!dynamicSubjects || dynamicSubjects.length === 0) {
@@ -639,19 +639,19 @@ function renderAdviserSectionStudents(container) {
                     <div class="flex gap-2 items-center flex-wrap">
                         <select onchange="setRecordQuarter(this.value)" class="px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] outline-none focus:border-primary transition font-bold text-gray-700 bg-white shadow-sm h-[34px]">
                             <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>${isSHS ? 'All Terms' : 'All Quarters'}</option>
-                            ${(function() {
-                                let gpList = ['1', '2', '3', '4'];
-                                if (typeof globalSettings !== 'undefined' && globalSettings['grading_periods']) {
-                                    try {
-                                        let parsed = JSON.parse(globalSettings['grading_periods']);
-                                        if (Array.isArray(parsed) && parsed.length > 0) gpList = parsed;
-                                    } catch(e){}
-                                }
-                                return gpList.map(gp => {
-                                    let label = isSHS ? 'Term ' + gp : gp + (gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th') + ' Quarter';
-                                    return `<option value="${gp}" ${window.currentRecordQuarter == gp ? 'selected' : ''}>${label}</option>`;
-                                }).join('');
-                            })()}
+                            ${(function () {
+            let gpList = ['1', '2', '3', '4'];
+            if (typeof globalSettings !== 'undefined' && globalSettings['grading_periods']) {
+                try {
+                    let parsed = JSON.parse(globalSettings['grading_periods']);
+                    if (Array.isArray(parsed) && parsed.length > 0) gpList = parsed;
+                } catch (e) { }
+            }
+            return gpList.map(gp => {
+                let label = isSHS ? 'Term ' + gp : gp + (gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th') + ' Quarter';
+                return `<option value="${gp}" ${window.currentRecordQuarter == gp ? 'selected' : ''}>${label}</option>`;
+            }).join('');
+        })()}
                         </select>
                         ${!isSHS ? `
                         <div class="flex items-center bg-white border border-gray-200 rounded-lg p-0.5 h-[34px]">
@@ -727,7 +727,7 @@ function renderAdminTeacherList(container) {
         );
     });
     let levelBtnsHtml = '';
-    
+
     if (currentUser.role === 'curriculum_coordinator') {
         if (currentUser.department === 'JHS') {
             filtered = filtered.filter(t => (t.level || 'JH') === 'JH');
@@ -754,7 +754,7 @@ function renderAdminTeacherList(container) {
                     <h2 class="text-2xl font-bold text-gray-800">Grading Records</h2>
                     <p class="text-sm text-gray-400 mt-1">${adminRecordsTab === 'teachers' ? 'Select a teacher to view their sections and student records.' : 'View student analytics by level and grade.'}</p>
                 </div>
-                <div class="flex flex-col items-end gap-2 w-full md:w-auto">
+                <div class="flex flex-col itemsp-2 w-full md:w-auto">
                     <!-- Teachers / Students Tab -->
                     <div class="flex gap-1 bg-gray-100 rounded-2xl p-1">
                         <button onclick="switchRecordsTab('teachers')" class="px-5 py-2 rounded-xl text-sm font-bold transition ${adminRecordsTab === 'teachers' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-primary'}">
@@ -875,17 +875,17 @@ window.studentsAnalyticsSection = window.studentsAnalyticsSection || 'all';
 window.studentsAnalyticsSelectedLRN = window.studentsAnalyticsSelectedLRN || null;
 window.studentsAnalyticsSearch = window.studentsAnalyticsSearch || '';
 
-window.toggleStudentMgmtFilters = function() {
+window.toggleStudentMgmtFilters = function () {
     const pop = document.getElementById('student-mgmt-filters-popover');
-    if(pop) pop.classList.toggle('hidden');
+    if (pop) pop.classList.toggle('hidden');
 };
 
-window.filterStudentMgmtList = function(val) {
+window.filterStudentMgmtList = function (val) {
     window.studentsAnalyticsSearch = val.toLowerCase();
     const rows = document.querySelectorAll('.student-mgmt-row');
     rows.forEach(row => {
         const name = row.getAttribute('data-name');
-        if(name.includes(window.studentsAnalyticsSearch)) {
+        if (name.includes(window.studentsAnalyticsSearch)) {
             row.style.display = '';
         } else {
             row.style.display = 'none';
@@ -893,10 +893,10 @@ window.filterStudentMgmtList = function(val) {
     });
 };
 
-window.selectStudentMgmtProfile = function(lrn) {
+window.selectStudentMgmtProfile = function (lrn) {
     const sel = students.find(s => s.lrn === lrn);
     if (!sel) return;
-    
+
     // Determine Level
     let gLevel = 'Unknown Level';
     const sName = (sel.section || '').toLowerCase();
@@ -914,17 +914,17 @@ window.selectStudentMgmtProfile = function(lrn) {
                 let m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
                 if (m2) gLevel = 'Grade ' + m2[1];
             }
-        } catch(e) {}
+        } catch (e) { }
     }
-    
+
     let advName = 'None';
     if (typeof teachers !== 'undefined') {
         const adv = teachers.find(t => t.is_adviser && (t.section || '').toLowerCase().includes(sName));
-        if(adv) advName = adv.name;
+        if (adv) advName = adv.name;
     }
-    
-    const photo = sel.photo || 'https://ui-avatars.com/api/?name='+encodeURIComponent(sel.name)+'&size=120&background=166534&color=fff';
-    
+
+    const photo = sel.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(sel.name) + '&size=120&background=166534&color=fff';
+
     Swal.fire({
         html: `
             <div class="text-left relative overflow-hidden bg-white p-2">
@@ -981,7 +981,7 @@ function renderAdminStudentsAnalytics(container) {
         if (s.match(/\b9\b/) || s.startsWith('9-')) return 'Grade 9';
         if (s.match(/\b8\b/) || s.startsWith('8-')) return 'Grade 8';
         if (s.match(/\b7\b/) || s.startsWith('7-')) return 'Grade 7';
-        
+
         try {
             const savedSections = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
             const secData = savedSections.find(x => x.name.toLowerCase() === s);
@@ -989,8 +989,8 @@ function renderAdminStudentsAnalytics(container) {
                 let m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
                 if (m2) return 'Grade ' + m2[1];
             }
-        } catch(e) {}
-        
+        } catch (e) { }
+
         if (typeof teachers !== 'undefined') {
             const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s));
             if (adv) {
@@ -1003,9 +1003,9 @@ function renderAdminStudentsAnalytics(container) {
 
     let allGrades = new Set();
     let allSections = new Set();
-    
+
     students.forEach(s => {
-        if(s.section) {
+        if (s.section) {
             allSections.add(s.section);
             allGrades.add(guessGradeFromSection(s.section));
         }
@@ -1024,13 +1024,13 @@ function renderAdminStudentsAnalytics(container) {
 
     // 3. Render Profile Summary
     // 4. Render Table Rows
-    const studentRowsHtml = filtered.sort((a,b) => a.name.localeCompare(b.name)).map(s => {
+    const studentRowsHtml = filtered.sort((a, b) => a.name.localeCompare(b.name)).map(s => {
         const hasFailing = (s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75)) || (s.subjects || []).some(x => x.g !== null && parseFloat(x.g) < 75) || (s.allSubjects || []).some(x => x.g !== null && parseFloat(x.g) < 75);
         let statusText = 'Pending';
         let statusColor = 'bg-gray-100 text-gray-500';
         let barColor = 'bg-gray-300';
         let progress = 0;
-        
+
         if (s.gwa > 0) {
             progress = s.gwa;
             if (s.gwa >= 90 && !hasFailing) {
@@ -1047,7 +1047,7 @@ function renderAdminStudentsAnalytics(container) {
                 barColor = 'bg-red-500';
             }
         }
-        
+
         const isSelected = window.studentsAnalyticsSelectedLRN === s.lrn;
         const rowClass = 'hover:bg-gray-50 cursor-pointer';
 
@@ -1058,7 +1058,7 @@ function renderAdminStudentsAnalytics(container) {
             </td>
             <td class="py-3 px-4">
                 <div class="flex items-center gap-3">
-                    <img src="${s.photo || 'https://ui-avatars.com/api/?name='+encodeURIComponent(s.name)+'&background=f3f4f6&color=6b7280'}" class="w-8 h-8 rounded-full object-cover">
+                    <img src="${s.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(s.name) + '&background=f3f4f6&color=6b7280'}" class="w-8 h-8 rounded-full object-cover">
                     <div>
                         <p class="font-bold text-gray-800 leading-tight">${s.name}</p>
                         <p class="text-[10px] text-gray-400">${s.lrn}</p>
@@ -1184,7 +1184,7 @@ function renderAdminStudentsAnalytics(container) {
     `;
 
     // Apply any active search filter after re-rendering
-    if(window.studentsAnalyticsSearch) {
+    if (window.studentsAnalyticsSearch) {
         filterStudentMgmtList(window.studentsAnalyticsSearch);
     }
 }
@@ -1327,7 +1327,7 @@ function renderAdminSectionStudents(container) {
             let gradeNum = 7;
             if (typeof getStudentGradeNumber === 'function') {
                 const sampleStudent = students.find(s => s.section === sec);
-                gradeNum = getStudentGradeNumber(sampleStudent || {section: sec}) || 7;
+                gradeNum = getStudentGradeNumber(sampleStudent || { section: sec }) || 7;
             }
             visibleSubjects = getSubjectsForReport(level, null, gradeNum, window.currentRecordSemester || 1);
         }
@@ -1379,19 +1379,19 @@ function renderAdminSectionStudents(container) {
                     <div class="flex gap-2 items-center flex-wrap">
                         <select onchange="setRecordQuarter(this.value)" class="px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] outline-none focus:border-primary transition font-bold text-gray-700 bg-white shadow-sm h-[34px]">
                             <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>${isSHS ? 'All Terms' : 'All Quarters'}</option>
-                            ${(function() {
-                                let gpList = ['1', '2', '3', '4'];
-                                if (typeof globalSettings !== 'undefined' && globalSettings['grading_periods']) {
-                                    try {
-                                        let parsed = JSON.parse(globalSettings['grading_periods']);
-                                        if (Array.isArray(parsed) && parsed.length > 0) gpList = parsed;
-                                    } catch(e){}
-                                }
-                                return gpList.map(gp => {
-                                    let label = isSHS ? 'Term ' + gp : gp + (gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th') + ' Quarter';
-                                    return `<option value="${gp}" ${window.currentRecordQuarter == gp ? 'selected' : ''}>${label}</option>`;
-                                }).join('');
-                            })()}
+                            ${(function () {
+            let gpList = ['1', '2', '3', '4'];
+            if (typeof globalSettings !== 'undefined' && globalSettings['grading_periods']) {
+                try {
+                    let parsed = JSON.parse(globalSettings['grading_periods']);
+                    if (Array.isArray(parsed) && parsed.length > 0) gpList = parsed;
+                } catch (e) { }
+            }
+            return gpList.map(gp => {
+                let label = isSHS ? 'Term ' + gp : gp + (gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th') + ' Quarter';
+                return `<option value="${gp}" ${window.currentRecordQuarter == gp ? 'selected' : ''}>${label}</option>`;
+            }).join('');
+        })()}
                         </select>
                         <div class="relative h-[34px]">
                             <i class="fas fa-search absolute left-3 top-2.5 text-gray-300 text-[10px]"></i>
@@ -1455,7 +1455,7 @@ function renderAdminSectionStudents(container) {
                     const subData = (s.subjects || []).find(x => x.n === subName) || (s.allSubjects || []).find(x => x.n === subName);
                     return subData && subData.g !== null && parseFloat(subData.g) < 75;
                 });
-                
+
                 if (isSH) {
                     if (s.gwa >= 90 && !hasFailing) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Academic Excellence Award</span>';
@@ -1633,15 +1633,15 @@ function renderMasterRecordsView(container) {
                         <button onclick="setRecordSemester(1)"
                                 class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
                                        ${window.currentRecordSemester === 1
-            ? 'bg-white text-primary shadow-sm'
-            : 'text-gray-500 hover:bg-white/50 hover:text-gray-700'}">
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-gray-500 hover:bg-white/50 hover:text-gray-700'}">
                             1st Sem
                         </button>
                         <button onclick="setRecordSemester(2)"
                                 class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
                                        ${window.currentRecordSemester === 2
-            ? 'bg-white text-primary shadow-sm'
-            : 'text-gray-500 hover:bg-white/50 hover:text-gray-700'}">
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-gray-500 hover:bg-white/50 hover:text-gray-700'}">
                             2nd Sem
                         </button>
                     </div>
@@ -1764,16 +1764,16 @@ function removePinnedSection(sec) {
     });
 }
 
-window.promptAddViewSection = function() {
+window.promptAddViewSection = function () {
     const rawSec = localStorage.getItem('cnhs_sections');
     const sectionsData = rawSec ? JSON.parse(rawSec) : [];
     const yearSections = sectionsData.filter(s => !s.schoolYear || s.schoolYear === (window.currentRecordSchoolYear || '2025-2026')).map(s => s.name);
-    
+
     let availableForSelect = Array.from(new Set([
         ...(currentUser.role === 'teacher' && currentUser.handledSections ? currentUser.handledSections : []),
         ...pinnedSections
     ])).filter(s => s !== 'all');
-    
+
     const unpinned = yearSections.filter(s => !availableForSelect.includes(s));
 
     const getGrade = (secName) => {
@@ -1787,7 +1787,7 @@ window.promptAddViewSection = function() {
         return 'Unknown';
     };
 
-    const allAvailableGrades = Array.from(new Set(unpinned.map(s => getGrade(s)).filter(g => g !== 'Unknown'))).sort((a,b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+    const allAvailableGrades = Array.from(new Set(unpinned.map(s => getGrade(s)).filter(g => g !== 'Unknown'))).sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
 
     const overlay = document.createElement('div');
     overlay.id = 'add-view-sec-modal';
@@ -1837,7 +1837,7 @@ window.promptAddViewSection = function() {
     `;
     document.body.appendChild(overlay);
 
-    window.addPinnedSectionAndClose = function(sec) {
+    window.addPinnedSectionAndClose = function (sec) {
         if (sec && !pinnedSections.includes(sec)) {
             pinnedSections.push(sec);
             savePinnedSections();
@@ -1857,7 +1857,7 @@ window.promptAddViewSection = function() {
         document.querySelectorAll('.view-section-option').forEach(el => {
             const text = el.innerText.toLowerCase();
             const g = el.getAttribute('data-grade');
-            
+
             const matchQ = text.includes(q);
             const matchF = (f === 'All' || g === f);
 
@@ -1930,7 +1930,7 @@ function renderDetailedSubjectView(container, subject) {
             `).join('');
 
     let isSHS = false;
-    
+
     // Check if the currently pinned sections indicate SHS
     if (visiblePinnedSections.length > 0) {
         const secName = visiblePinnedSections[0].toLowerCase();
@@ -1939,23 +1939,23 @@ function renderDetailedSubjectView(container, subject) {
         }
     }
 
-    const quarterBtnsHtml = isSHS 
+    const quarterBtnsHtml = isSHS
         ? [1, 2, 3].map(q => `
             <button onclick="setRecordQuarter(${q})"
                 class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
                                ${(window.currentRecordQuarter || 1) === q
-                    ? 'bg-white text-primary shadow-sm'
-                    : 'text-white/80 hover:bg-white/20 hover:text-white'
-                }">
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-white/80 hover:bg-white/20 hover:text-white'
+            }">
                 Term ${q}
             </button>`).join('')
         : [1, 2, 3, 4].map(q => `
             <button onclick = "setRecordQuarter(${q})"
         class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
                        ${(window.currentRecordQuarter || 1) === q
-            ? 'bg-white text-primary shadow-sm'
-            : 'text-white/80 hover:bg-white/20 hover:text-white'
-        } ">
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-white/80 hover:bg-white/20 hover:text-white'
+            } ">
             Q${q}
         </button>
             `).join('');
@@ -2292,30 +2292,30 @@ function updateInlineScore(input, lrn, field, subject) {
     const wwTotalCell = document.getElementById(`ww-total-${lrn}`);
     const wwCell = document.getElementById(`ww-ps-${lrn}`);
     const wwWSCell = document.getElementById(`ww-ws-${lrn}`);
-    
+
     const ptTotalCell = document.getElementById(`pt-total-${lrn}`);
     const ptCell = document.getElementById(`pt-ps-${lrn}`);
     const ptWSCell = document.getElementById(`pt-ws-${lrn}`);
-    
+
     const qaCell = document.getElementById(`qa-ps-${lrn}`);
     const qaWSCell = document.getElementById(`qa-ws-${lrn}`);
-    
+
     const finICell = document.getElementById(`fin-i-${lrn}`);
     const finCell = document.getElementById(`fin-${lrn}`);
 
     if (wwTotalCell) wwTotalCell.innerText = sub.wwTotal || '-';
     if (wwCell) wwCell.innerText = sub.wwPS || '-';
     if (wwWSCell) wwWSCell.innerText = sub.wwWS || '-';
-    
+
     if (ptTotalCell) ptTotalCell.innerText = sub.ptTotal || '-';
     if (ptCell) ptCell.innerText = sub.ptPS || '-';
     if (ptWSCell) ptWSCell.innerText = sub.ptWS || '-';
-    
+
     if (qaCell) qaCell.innerText = sub.qaPS || '-';
     if (qaWSCell) qaWSCell.innerText = sub.qaWS || '-';
-    
+
     if (finICell) finICell.innerText = sub.initialGrade || '-';
-    
+
     if (finCell) {
         finCell.innerText = sub.g !== null && sub.g !== undefined ? sub.g : '-';
         finCell.className = `font-bold bg-gray-300 shadow-sm border-l-2 border-gray-400 text-base static-cell text-center ${sub.g !== null && sub.g < 75 ? 'text-red-600' : 'text-gray-900'}`;
@@ -2644,7 +2644,7 @@ function printReport(title) {
     // Prepare print content
     const printContents = tableDiv.innerHTML;
     const originalTitle = document.title;
-    
+
     // Create an iframe to print from so we don't mess up current document state
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -2654,9 +2654,9 @@ function printReport(title) {
     iframe.style.height = '0';
     iframe.style.border = '0';
     document.body.appendChild(iframe);
-    
+
     const doc = iframe.contentWindow.document;
-    
+
     // Add tailored styles for print layout
     doc.write(`
         <html>
@@ -2737,7 +2737,7 @@ function printReport(title) {
         </body>
         </html>
     `);
-    
+
     doc.close();
 
     // Give it a moment to render styles securely
