@@ -159,6 +159,12 @@ function renderRecords(container) {
     // ── Admin drill-down ──
     if (adminRecordsTab === 'students') {
         renderAdminStudentsAnalytics(container);
+    } else if (adminRecordsTab === 'advisory') {
+        if (adminSelectedSection && adminSelectedTeacher) {
+            renderAdviserSectionStudents(container);
+        } else {
+            renderAdminAdvisoryList(container);
+        }
     } else if (adminSelectedSection && adminSelectedTeacher) {
         if (currentSubjectView) {
             renderDetailedSubjectView(container, currentSubjectView);
@@ -512,8 +518,15 @@ async function removeAdviserSection(secToRemove) {
 let adviserSearch = '';
 
 function renderAdviserSectionStudents(container) {
-    const sec = adviserSelectedSection;
-    if (!sec) { renderAdviserSectionList(container); return; }
+    const sec = adviserSelectedSection || adminSelectedSection;
+    if (!sec) {
+        if (typeof adminRecordsTab !== 'undefined' && adminRecordsTab === 'advisory') {
+            renderAdminAdvisoryList(container);
+        } else {
+            renderAdviserSectionList(container);
+        }
+        return;
+    }
 
     const search = adviserSearch.toLowerCase();
     let secStudents = students.filter(s => s.section === sec);
@@ -621,9 +634,9 @@ function renderAdviserSectionStudents(container) {
     container.innerHTML = `
             <div class= "flex flex-col gap-4 animate-slide-up" style = "height: calc(100vh - 140px);">
             <div class="flex items-center gap-2 text-sm flex-wrap shrink-0">
-                <button onclick="adviserSelectedSection = null; renderAdviserRecords(document.getElementById('content-area'));"
+                <button onclick="${typeof adminRecordsTab !== 'undefined' && adminRecordsTab === 'advisory' ? "adminSelectedSection = null; adminSelectedTeacher = null; renderRecords(document.getElementById('content-area'));" : "adviserSelectedSection = null; renderAdviserRecords(document.getElementById('content-area'));"}"
                     class="text-gray-400 hover:text-primary font-semibold transition">
-                    <i class="fas fa-home mr-1"></i> My Sections
+                    <i class="fas fa-home mr-1"></i> ${typeof adminRecordsTab !== 'undefined' && adminRecordsTab === 'advisory' ? "Advisory Teachers" : "My Sections"}
                 </button>
                 <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
                 <span class="text-gray-700 font-bold">${sec}</span>
@@ -764,6 +777,9 @@ function renderAdminTeacherList(container) {
                         <button onclick="switchRecordsTab('teachers')" class="px-5 py-2 rounded-xl text-sm font-bold transition ${adminRecordsTab === 'teachers' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-primary'}">
                             <i class="fas fa-chalkboard-teacher mr-1.5"></i>Teachers
                         </button>
+                        <button onclick="switchRecordsTab('advisory')" class="px-5 py-2 rounded-xl text-sm font-bold transition ${adminRecordsTab === 'advisory' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-primary'}">
+                            <i class="fas fa-star mr-1.5"></i>Advisory
+                        </button>
                         <button onclick="switchRecordsTab('students')" class="px-5 py-2 rounded-xl text-sm font-bold transition ${adminRecordsTab === 'students' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-primary'}">
                             <i class="fas fa-users mr-1.5"></i>Students
                         </button>
@@ -866,6 +882,8 @@ function switchRecordsTab(tab) {
     adminSelectedSection = null;
     if (tab === 'students') {
         renderAdminStudentsAnalytics(document.getElementById('content-area'));
+    } else if (tab === 'advisory') {
+        renderAdminAdvisoryList(document.getElementById('content-area'));
     } else {
         renderAdminTeacherList(document.getElementById('content-area'));
     }
@@ -1091,6 +1109,9 @@ function renderAdminStudentsAnalytics(container) {
             <button onclick="switchRecordsTab('teachers')" class="px-5 py-2 rounded-xl text-sm font-bold transition text-gray-500 hover:text-primary">
                 <i class="fas fa-chalkboard-teacher mr-1.5"></i>Teachers
             </button>
+            <button onclick="switchRecordsTab('advisory')" class="px-5 py-2 rounded-xl text-sm font-bold transition text-gray-500 hover:text-primary">
+                <i class="fas fa-star mr-1.5"></i>Advisory
+            </button>
             <button onclick="switchRecordsTab('students')" class="px-5 py-2 rounded-xl text-sm font-bold transition bg-white text-primary shadow-sm">
                 <i class="fas fa-users mr-1.5"></i>Students
             </button>
@@ -1208,6 +1229,148 @@ function setStudentsGradeFilter(grade) {
 // ─────────────────────────────────────────────────────────────────────────────
 // LEVEL 2: Teacher's Sections
 // ─────────────────────────────────────────────────────────────────────────────
+function renderAdminAdvisoryList(container) {
+    const search = adminTeacherSearch.toLowerCase();
+    
+    // Create a list of all advisory sections from teachers
+    let advisorySections = [];
+    teachers.forEach(t => {
+        const sections = (t.section || '').split(',').map(s => s.trim()).filter(Boolean);
+        sections.forEach(sec => {
+            advisorySections.push({ sec, t });
+        });
+    });
+
+    // Filter based on search
+    let filtered = advisorySections.filter(item => {
+        if (!search) return true;
+        return (
+            item.sec.toLowerCase().includes(search) ||
+            item.t.name.toLowerCase().includes(search)
+        );
+    });
+
+    let levelBtnsHtml = '';
+    if (currentUser.role === 'curriculum_coordinator') {
+        if (currentUser.department === 'JHS') {
+            filtered = filtered.filter(item => (item.t.level || 'JH') === 'JH');
+        } else if (currentUser.department === 'SHS') {
+            filtered = filtered.filter(item => (item.t.level || 'JH') === 'SH');
+        }
+    } else {
+        if (adminLevelFilter !== 'ALL') {
+            filtered = filtered.filter(item => (item.t.level || 'JH') === adminLevelFilter);
+        }
+        levelBtnsHtml = ['ALL', 'JH', 'SH'].map(l => {
+            const labels = { ALL: 'All Levels', JH: 'Junior High', SH: 'Senior High' };
+            const active = l === adminLevelFilter;
+            return `<button onclick="setAdminLevelFilter('${l}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold border transition ${active ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary'}"> ${labels[l]}</button>`;
+        }).join('');
+    }
+
+    container.innerHTML = `
+        <div class="flex flex-col gap-6 animate-slide-up">
+            <!--Tab row + header-->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Grading Records</h2>
+                    <p class="text-sm text-gray-400 mt-1">Select an advisory section to view full student records.</p>
+                </div>
+                <div class="flex flex-col itemsp-2 w-full md:w-auto">
+                    <!-- Teachers / Students Tab -->
+                    <div class="flex gap-1 bg-gray-100 rounded-2xl p-1">
+                        <button onclick="switchRecordsTab('teachers')" class="px-5 py-2 rounded-xl text-sm font-bold transition text-gray-500 hover:text-primary">
+                            <i class="fas fa-chalkboard-teacher mr-1.5"></i>Teachers
+                        </button>
+                        <button onclick="switchRecordsTab('advisory')" class="px-5 py-2 rounded-xl text-sm font-bold transition bg-white text-primary shadow-sm">
+                            <i class="fas fa-star mr-1.5"></i>Advisory
+                        </button>
+                        <button onclick="switchRecordsTab('students')" class="px-5 py-2 rounded-xl text-sm font-bold transition text-gray-500 hover:text-primary">
+                            <i class="fas fa-users mr-1.5"></i>Students
+                        </button>
+                    </div>
+                    <!-- Level filter pills -->
+                    <div class="flex gap-2 flex-wrap">${levelBtnsHtml}</div>
+                    <!-- Search bar -->
+                    <div class="relative w-full md:w-72 mt-2">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
+                        <input
+                            id="advisory-search-input"
+                            type="text"
+                            value="${adminTeacherSearch}"
+                            oninput="adminTeacherSearch = this.value; renderAdminAdvisoryList(document.getElementById('content-area'));"
+                            placeholder="Search section, adviser..."
+                            class="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-primary transition shadow-sm"
+                        >
+                    </div>
+                </div>
+            </div>
+            
+            ${filtered.length === 0 ? `
+                <div class="flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-100 shadow-sm mt-4">
+                    <i class="fas fa-star text-5xl mb-4 opacity-30"></i>
+                    <p class="font-semibold">No advisory sections found.</p>
+                    <p class="text-xs mt-1">Try adjusting your search.</p>
+                </div>
+            ` : `
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                    ${filtered.map(item => {
+                        const sec = item.sec;
+                        const t = item.t;
+                        const ss = students.filter(s => s.section === sec);
+                        const atRisk = ss.filter(s => (s.gwa > 0 && s.gwa < 75) || (s.subjects || []).some(x => x.g !== null && parseFloat(x.g) < 75) || (s.allSubjects || []).some(x => x.g !== null && parseFloat(x.g) < 75)).length;
+                        const withGrades = ss.filter(s => s.gwa > 0).length;
+                        const riskColor = atRisk > 0 ? 'text-red-500' : 'text-gray-400';
+                        const initials = t.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+                        return `
+                        <div onclick="adminSelectedTeacher = teachers.find(x => x.id === '${t.id}'); adminSelectedSection = '${sec}'; renderRecords(document.getElementById('content-area'));" 
+                            class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 cursor-pointer transition-all duration-200 group h-full flex flex-col">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                                <div class="overflow-hidden">
+                                    <h3 class="font-bold text-gray-900 truncate group-hover:text-primary transition-colors">${sec}</h3>
+                                    <div class="flex items-center gap-1 mt-0.5">
+                                        <span class="text-[10px] text-gray-500 truncate"><i class="fas fa-user-tie mr-1"></i>${t.name}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-2 bg-gray-50 rounded-xl p-3 mt-auto">
+                                <div class="text-center">
+                                    <p class="text-lg font-bold text-gray-800">${ss.length}</p>
+                                    <p class="text-[10px] text-gray-400 uppercase">Total</p>
+                                </div>
+                                <div class="text-center border-x border-gray-200">
+                                    <p class="text-lg font-bold text-blue-600">${withGrades}</p>
+                                    <p class="text-[10px] text-gray-400 uppercase">Graded</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-lg font-bold ${riskColor}">${atRisk}</p>
+                                    <p class="text-[10px] text-gray-400 uppercase">At Risk</p>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            `}
+        </div>
+    `;
+    
+    // Focus search input and preserve cursor if it exists
+    setTimeout(() => {
+        const input = document.getElementById('advisory-search-input');
+        if (input && adminTeacherSearch) {
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+        }
+    }, 10);
+}
+
+
+
 function renderAdminTeacherSections(container) {
     const t = adminSelectedTeacher;
     if (!t) { renderAdminTeacherList(container); return; }
