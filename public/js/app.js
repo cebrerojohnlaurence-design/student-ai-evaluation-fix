@@ -1016,8 +1016,13 @@ async function processAI() {
             const cleaned = rawJson.filter(row => row && row.length > 0 && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''));
             const dataString = JSON.stringify(cleaned);
 
-            const excelPrompt = prompt + `\n\nHere is the data extracted from the sheet '${targetSheetName}' of the uploaded Excel file. You are extracting scores for ${isSHS ? 'Term' : 'Quarter'} ${targetQuarter}. Please carefully analyze the data and extract the scores according to the format instructions above:\n\n` + dataString;
-
+            let extraContext = "";
+            if (currentMode === 'CLASS_RECORD') {
+                extraContext = ` You are extracting scores for ${isSHS ? 'Term' : 'Quarter'} ${targetQuarter}. Please carefully analyze the data and extract the scores according to the format instructions above.`;
+            } else {
+                extraContext = ` Please carefully analyze the data and extract the requested information according to the format instructions above.`;
+            }
+            const excelPrompt = prompt + `\n\nHere is the data extracted from the sheet '${targetSheetName}' of the uploaded Excel file.${extraContext}\n\n` + dataString;
             resText = await callGemini(excelPrompt, null);
         } else {
             resText = await callGemini(prompt, base64Image);
@@ -1083,8 +1088,9 @@ async function processAI() {
             let skipCount = 0;
             for (const x of data) {
                 try {
-                    // Prevent duplicate creation
-                    const existing = findStudentMatch(x.name);
+                    // Prevent duplicate creation with exact match
+                    const cleanNewName = getClean(x.name);
+                    const existing = students.find(s => getClean(s.name) === cleanNewName || (x.lrn && s.lrn === x.lrn));
                     if (existing) {
                         skipCount++;
                         continue;
