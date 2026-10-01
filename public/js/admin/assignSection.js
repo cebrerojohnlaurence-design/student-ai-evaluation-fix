@@ -420,7 +420,7 @@ function _buildSectionDetailPanel(sec) {
         '<button onclick="printSectionMasterlist(\'' + sec.name + '\')" class="flex items-center gap-2.5 px-4 py-2.5 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-100 transition border border-blue-200 shadow-sm">' +
         '<i class="fas fa-print text-sm"></i> Print' +
         '</button>' +
-        '<button onclick="openAssignScanModal()" class="flex items-center gap-2 px-5 py-2.5 bg-green-50 text-green-700 rounded-xl text-sm font-extrabold hover:bg-green-100 transition border border-green-200 shadow-sm">' +
+        '<button onclick="openScanner(&apos;ASSIGN_SECTION&apos;)" class="flex items-center gap-2 px-5 py-2.5 bg-green-50 text-green-700 rounded-xl text-sm font-extrabold hover:bg-green-100 transition border border-green-200 shadow-sm">' +
         '<i class="fas fa-camera text-base"></i> AI Camera Scan' +
         '</button>' +
         '</div>' +

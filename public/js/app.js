@@ -904,7 +904,7 @@ function openScanner(mode) {
     currentMode = mode;
     document.getElementById('camera-modal').classList.remove('hidden');
 
-    let title = mode === 'STUDENT_LIST' ? 'AI Student Registration' : (mode === 'ATTENDANCE' ? 'AI Attendance Scanner' : 'AI Grade Extraction');
+    let title = mode === 'STUDENT_LIST' ? 'AI Student Registration' : (mode === 'ATTENDANCE' ? 'AI Attendance Scanner' : (mode === 'ASSIGN_SECTION' ? 'AI Section Assignment' : 'AI Grade Extraction'));
     document.getElementById('camera-title').innerText = title;
 
     document.getElementById('doc-upload').value = '';
@@ -913,7 +913,7 @@ function openScanner(mode) {
     document.getElementById('process-btn').disabled = true;
     document.getElementById('processing-status').classList.add('hidden');
 
-    let hint = mode === 'STUDENT_LIST' ? 'Upload Class List Image' : (mode === 'ATTENDANCE' ? 'Upload DepEd SF2 Attendance Record' : 'Upload Overall Class Record');
+    let hint = mode === 'STUDENT_LIST' ? 'Upload Class List Image' : (mode === 'ATTENDANCE' ? 'Upload DepEd SF2 Attendance Record' : (mode === 'ASSIGN_SECTION' ? 'Upload Class Roster Image' : 'Upload Overall Class Record'));
     if (mode === 'CLASS_RECORD' && currentSubjectView) hint = `Upload ${currentSubjectView} Details Record`;
     document.getElementById('camera-hint').innerText = hint;
 }
@@ -986,6 +986,11 @@ async function processAI() {
         prompt = `Extract student names and their ${currentSubjectView} breakdown scores ${termStr}: Quiz 1-${MAX_WW} (${wwFormat.join(', ')}), Task 1-${MAX_PT} (${ptFormat.join(', ')}), Exam (qa). IMPORTANT: Also extract the row for maximum possible scores (often labeled 'Highest Possible Score') and include it in the array exactly like a student, but strictly name it 'HIGHEST POSSIBLE SCORE'. Format as JSON array: ${formatStr}`;
     } else if (currentMode === 'ATTENDANCE') {
         prompt = `Extract student names and their daily attendance marks for 25 columns (5 weeks of Monday-Friday). Return "/" for present, "x" for absent, or "" if blank. Format as JSON array of objects: {name: 'Student Name', marks: ["/", "x", ...]} (exactly 25 strings in marks array). Look for a grid layout with M-T-W-T-F headers.`;
+    } else if (currentMode === 'ASSIGN_SECTION') {
+        prompt = 'You are analyzing an image of a class list or student roster. ' +
+        'Extract all student names you can find. For each student, try to identify their LRN (Learner Reference Number, 8–12 digits) if visible. ' +
+        'Return a JSON array of objects: [{"name": "Last, First MI", "lrn": "12345678"}]. ' +
+        'If no LRN is found for a student, omit the lrn field. Only return the JSON array, no extra text.';
     } else {
         prompt = `Extract student names, their individual subject grades ${subjectScope}, and ATTENDANCE from this class record image. Format as JSON array: {name: 'Student Name', subjects: [{n:'Math', g:90}, ...], attendance: number}`;
     }
@@ -1213,6 +1218,22 @@ async function processAI() {
                 }
             });
             showMessage(`AI extracted detailed daily attendance for ${count} students.`);
+        } else if (currentMode === 'ASSIGN_SECTION') {
+            if (typeof _renderAssignScanResults === 'function') {
+                closeCameraModal();
+                const modal = document.getElementById('assign-scan-modal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    // Hide the file upload elements since we already scanned
+                    const uploadBox = document.getElementById('assign-scan-upload');
+                    if (uploadBox && uploadBox.parentElement) uploadBox.parentElement.classList.add('hidden');
+                    const btn = document.getElementById('assign-scan-btn');
+                    if (btn) btn.classList.add('hidden');
+                    
+                    _renderAssignScanResults(data);
+                }
+            }
+            return; // closeCameraModal already called
         } else {
             let count = 0;
             const savePromises = [];
