@@ -1491,10 +1491,6 @@ function renderAdminSectionStudents(container) {
                                                 class="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-100 transition border border-blue-100" title="Report Card">
                                                 <i class="fas fa-print"></i>
                                             </button>
-                                            <button onclick="openAttendanceModal('${s.lrn}')"
-                                                class="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-[10px] font-bold hover:bg-green-100 transition border border-green-100" title="Manage Attendance">
-                                                <i class="fas fa-calendar-check text-[10px]"></i>
-                                            </button>
                                         </td>
                                     </tr>
                                     `;
@@ -1889,7 +1885,14 @@ function renderDetailedSubjectView(container, subject) {
     };
     const yearSections = sectionsData.filter(s => !s.schoolYear || s.schoolYear === (window.currentRecordSchoolYear || '2025-2026')).map(s => s.name);
 
-    const visiblePinnedSections = pinnedSections.filter(sec => yearSections.includes(sec));
+    let visiblePinnedSections = pinnedSections.filter(sec => yearSections.includes(sec));
+    
+    // Admin/Coordinator viewing a specific section
+    if (currentUser.role !== 'teacher' && typeof adminSelectedSection !== 'undefined' && adminSelectedSection) {
+        visiblePinnedSections = [adminSelectedSection];
+        currentRecordSection = adminSelectedSection;
+    }
+
     const unpinned = yearSections.filter(s => !visiblePinnedSections.includes(s));
 
     if (currentRecordSection === 'all' && currentUser.role === 'teacher') {
@@ -1986,6 +1989,7 @@ function renderDetailedSubjectView(container, subject) {
                                    onkeyup="searchRecordsTable(this.value)" placeholder="Search..."
                                    class="pl-8 pr-2 py-1.5 border-0 rounded-lg text-[10px] outline-none bg-white/90 text-gray-800 w-36">
                         </div>
+                        ${currentUser.role === 'teacher' ? `
                         <button onclick="saveManualGrades()"
                                 class="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-blue-600 transition">
                             <i class="fas fa-save mr-1"></i>Save Grades
@@ -1994,6 +1998,7 @@ function renderDetailedSubjectView(container, subject) {
                                 class="px-3 py-1.5 bg-accent text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-yellow-600 transition">
                             <i class="fas fa-camera mr-1"></i>Scan Record
                         </button>
+                        ` : ''}
                         <button onclick="printReport('${subject} E-Class Record - Q${window.currentRecordQuarter || 1}')"
                                 class="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-[10px] font-bold uppercase shadow-sm hover:bg-purple-600 transition">
                             <i class="fas fa-print mr-1"></i>Print Grades
