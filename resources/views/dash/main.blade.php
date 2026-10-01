@@ -123,6 +123,7 @@
                         <i
                             class="fas fa-calendar-alt text-primary mx-1 sm:mx-2 text-[10px] sm:text-xs tracking-tighter"
                         ></i>
+                        <!-- School Year -->
                         <select
                             id="global-school-year"
                             onchange="

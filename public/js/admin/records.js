@@ -579,17 +579,17 @@ function renderAdviserSectionStudents(container) {
                 if (isSH) {
                     if (gwaVal >= 90 && !hasFailing) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Academic Excellence Award</span>';
-                    } else if (gwaVal >= 75) {
+                    } else if (gwaVal >= 75 && !hasFailing) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
-                    } else if (gwaVal > 0) {
+                    } else if (gwaVal > 0 || hasFailing) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
                     }
                 } else {
                     if (gwaVal >= 98 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Highest Honor</span>';
                     else if (gwaVal >= 95 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 font-bold">High Honor</span>';
                     else if (gwaVal >= 90 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 font-bold">With Honor</span>';
-                    else if (gwaVal >= 75) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
-                    else if (gwaVal > 0) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                    else if (gwaVal >= 75 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
+                    else if (gwaVal > 0 || hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
                 }
             }
 
@@ -1453,15 +1453,15 @@ function renderAdminSectionStudents(container) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Academic Excellence Award</span>';
                     } else if (s.gwa >= 75 && !hasFailing) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
-                    } else if (s.gwa > 0) {
+                    } else if (s.gwa > 0 || hasFailing) {
                         badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
                     }
                 } else {
                     if (s.gwa >= 98 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 font-bold">Highest Honor</span>';
                     else if (s.gwa >= 95 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700 font-bold">High Honor</span>';
                     else if (s.gwa >= 90 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 font-bold">With Honor</span>';
-                    else if (s.gwa >= 75) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
-                    else if (s.gwa > 0) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
+                    else if (s.gwa >= 75 && !hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-bold">Regular</span>';
+                    else if (s.gwa > 0 || hasFailing) badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
                 }
 
                 return `
@@ -2739,5 +2739,8 @@ function printReport(title) {
         setTimeout(() => document.body.removeChild(iframe), 1000);
     }, 250);
 }
+
+
+
 
 

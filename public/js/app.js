@@ -18,15 +18,16 @@ async function fetchSettings() {
         const data = await res.json();
         if (data.settings) {
             globalSettings = data.settings;
-            
+
             // Apply global settings to UI immediately upon fetching
-            
+
             // 1. Sidebar App Name
             if (globalSettings.app_name) {
                 const sidebarTitle = document.querySelector('.sidebar-text h1');
                 if (sidebarTitle) sidebarTitle.textContent = globalSettings.app_name;
             }
-            
+
+            // School Year
             // 2. Global School Year Select
             const globalSelect = document.getElementById('global-school-year');
             if (globalSelect) {
@@ -38,16 +39,16 @@ async function fetchSettings() {
                     if (!Array.isArray(syList) || syList.length === 0) {
                         syList = ['2025-2026'];
                     }
-                    
+
                     let active = globalSettings.active_sy || window.currentRecordSchoolYear || '2025-2026';
                     if (!syList.includes(active)) active = syList[0];
-                    
+
                     globalSelect.innerHTML = syList.map(sy => `<option value="${sy}" ${sy === active ? 'selected' : ''}>S.Y. ${sy}</option>`).join('');
-                    
+
                     if (window.currentRecordSchoolYear !== active) {
                         window.currentRecordSchoolYear = active;
                     }
-                } catch(e) {
+                } catch (e) {
                     globalSelect.innerHTML = '<option value="2025-2026">S.Y. 2025-2026</option>';
                     window.currentRecordSchoolYear = '2025-2026';
                 }
@@ -341,7 +342,7 @@ const adminCreds = { user: 'admin', pass: 'admin123' };
 async function initAppData() {
     try {
         await fetchSettings();
-        
+
         const syParam = window.currentRecordSchoolYear || globalSettings.active_sy || '2025-2026';
         const [studRes, teachRes, subjectsRes] = await Promise.all([
             fetch('/api/students?school_year=' + syParam, { headers: { 'Accept': 'application/json' } }),
@@ -372,7 +373,7 @@ async function initAppData() {
             // only populate s.subjects with the active quarter (default 1)
             const activeQ = window.currentRecordQuarter || 1;
             s.subjects = s.allSubjects.filter(sub => (sub.quarter || 1) == activeQ);
-            
+
             computeStudentGWA(s);
         });
 
@@ -380,12 +381,12 @@ async function initAppData() {
             const adviserSections = (currentUser.section || '').split(',').map(s => s.trim()).filter(Boolean);
             const subjects = (currentUser.subject || '').split(',').map(s => s.trim()).filter(Boolean);
             const teacherSections = new Set(adviserSections);
-            
+
             const pinned = JSON.parse(localStorage.getItem('cnhs_pinned_sections_' + currentUser.id)) || [];
             pinned.forEach(sec => {
                 if (sec !== 'all') teacherSections.add(sec);
             });
-            
+
             if (subjects.length > 0) {
                 students.forEach(s => {
                     if (s.subjects && s.subjects.some(sub => subjects.includes(sub.n))) {
@@ -452,13 +453,13 @@ function showMessage(msg, isError = false) {
 }
 
 // Global Custom Confirm Wrapper (Replaces native confirm)
-window.showConfirm = function(msg, onConfirm, onCancel = null) {
+window.showConfirm = function (msg, onConfirm, onCancel = null) {
     const overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0';
-    
+
     const modal = document.createElement('div');
     modal.className = 'bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 transform transition-all duration-300 scale-95 opacity-0 text-center';
-    
+
     modal.innerHTML = `
         <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
             <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
@@ -470,26 +471,26 @@ window.showConfirm = function(msg, onConfirm, onCancel = null) {
             <button id="confirm-ok" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 shadow-md transition">Confirm</button>
         </div>
     `;
-    
+
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
-    
+
     setTimeout(() => {
         overlay.classList.remove('opacity-0');
         modal.classList.remove('scale-95', 'opacity-0');
     }, 10);
-    
+
     const close = () => {
         overlay.classList.add('opacity-0');
         modal.classList.add('scale-95', 'opacity-0');
         setTimeout(() => overlay.remove(), 300);
     };
-    
+
     document.getElementById('confirm-cancel').onclick = () => {
         close();
         if (onCancel) onCancel();
     };
-    
+
     document.getElementById('confirm-ok').onclick = () => {
         close();
         if (onConfirm) onConfirm();
@@ -527,7 +528,7 @@ async function login(role) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ action: 'Failed login attempt on Admin Portal: ' + u, user: 'System' })
-                }).catch(() => {});
+                }).catch(() => { });
                 throw new Error("Invalid username or password.");
             }
             currentUser.name = 'Admin Principal';
@@ -545,7 +546,7 @@ async function login(role) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ action: 'Failed login attempt on Teacher Portal: ' + u, user: 'System' })
-                }).catch(() => {});
+                }).catch(() => { });
                 throw new Error("Invalid username or password.");
             }
 
@@ -618,12 +619,12 @@ async function login(role) {
 function logout(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     logActivity(`User Logged Out: ${currentUser.name}`);
-    
+
     let loginRole = currentUser.role || 'admin';
     if (loginRole === 'principal' || loginRole === 'curriculum_coordinator') {
         loginRole = 'admin'; // Route back to the master staff portal
     }
-    
+
     sessionStorage.removeItem('cnhs_session');
     location.href = `/login/${loginRole}`;
 }
@@ -704,7 +705,9 @@ function navigate(view, skipPush = false) {
 
     try {
         switch (view) {
+            // principal dashboard, jhs curriculum dashboard, techpro and academic dashboad
             case 'dashboard': renderDashboard(area); break;
+            case 'add-student': renderAddStudent(area); break;
             case 'add-student': renderAddStudent(area); break;
             case 'records': renderRecords(area); break;
             case 'adviser': renderAdviserRecords(area); break;
@@ -714,7 +717,7 @@ function navigate(view, skipPush = false) {
 
             case 'logs': renderLogs(area); break;
             case 'settings': renderSettings(area); break;
-            case 'maintenance': 
+            case 'maintenance':
                 if (typeof renderMaintenance === 'function') {
                     renderMaintenance(area);
                 } else {
@@ -923,7 +926,7 @@ function handleDocPreview(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
         const ext = file.name.split('.').pop().toLowerCase();
-        
+
         if (ext === 'xlsx' || ext === 'xls') {
             excelFile = file;
             base64Image = null;
@@ -975,10 +978,10 @@ async function processAI() {
     } else if (currentMode === 'CLASS_RECORD' && currentSubjectView) {
         let wwFormat = [];
         let ptFormat = [];
-        for(let i=1; i<=MAX_WW; i++) wwFormat.push('ww'+i);
-        for(let i=1; i<=MAX_PT; i++) ptFormat.push('pt'+i);
-        
-        let formatStr = `{name: 'Student Name', ${wwFormat.map(k=>`${k}: number`).join(', ')}, ${ptFormat.map(k=>`${k}: number`).join(', ')}, qa: number}`;
+        for (let i = 1; i <= MAX_WW; i++) wwFormat.push('ww' + i);
+        for (let i = 1; i <= MAX_PT; i++) ptFormat.push('pt' + i);
+
+        let formatStr = `{name: 'Student Name', ${wwFormat.map(k => `${k}: number`).join(', ')}, ${ptFormat.map(k => `${k}: number`).join(', ')}, qa: number}`;
         let termStr = isSHS ? "using the 3-Term (Trimester) format" : "using the 4-Quarter format";
         prompt = `Extract student names and their ${currentSubjectView} breakdown scores ${termStr}: Quiz 1-${MAX_WW} (${wwFormat.join(', ')}), Task 1-${MAX_PT} (${ptFormat.join(', ')}), Exam (qa). IMPORTANT: Also extract the row for maximum possible scores (often labeled 'Highest Possible Score') and include it in the array exactly like a student, but strictly name it 'HIGHEST POSSIBLE SCORE'. Format as JSON array: ${formatStr}`;
     } else if (currentMode === 'ATTENDANCE') {
@@ -995,10 +998,10 @@ async function processAI() {
         if (excelFile) {
             const arrayBuffer = await excelFile.arrayBuffer();
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            
+
             let targetSheetName = workbook.SheetNames[0];
             const targetQuarter = window.currentRecordQuarter || 1;
-            
+
             const qStr1 = isSHS ? `T${targetQuarter}` : `Q${targetQuarter}`;
             const qStr2 = isSHS ? `TERM ${targetQuarter}` : `QUARTER ${targetQuarter}`;
             for (let name of workbook.SheetNames) {
@@ -1007,21 +1010,21 @@ async function processAI() {
                     break;
                 }
             }
-            
+
             const worksheet = workbook.Sheets[targetSheetName];
             const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             const cleaned = rawJson.filter(row => row && row.length > 0 && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''));
             const dataString = JSON.stringify(cleaned);
-            
+
             const excelPrompt = prompt + `\n\nHere is the data extracted from the sheet '${targetSheetName}' of the uploaded Excel file. You are extracting scores for ${isSHS ? 'Term' : 'Quarter'} ${targetQuarter}. Please carefully analyze the data and extract the scores according to the format instructions above:\n\n` + dataString;
-            
+
             resText = await callGemini(excelPrompt, null);
         } else {
             resText = await callGemini(prompt, base64Image);
         }
-        
+
         if (resText.startsWith("Error:")) throw new Error(resText);
-        
+
         // Robust JSON extraction
         let cleanRes = resText.replace(/```json|```/gi, '').trim();
         const startIdx = cleanRes.indexOf('[');
@@ -1029,7 +1032,7 @@ async function processAI() {
         if (startIdx !== -1 && endIdx !== -1) {
             cleanRes = cleanRes.substring(startIdx, endIdx + 1);
         }
-        
+
         data = JSON.parse(cleanRes);
 
         const levenshtein = (a, b) => {
@@ -1108,7 +1111,7 @@ async function processAI() {
                 } catch (e) { }
             }
             logActivity(`AI registered ${successCount} new students via list scan. Skipped ${skipCount} duplicates.`);
-            const msg = skipCount > 0 
+            const msg = skipCount > 0
                 ? `AI detected and added ${successCount} new students. (Skipped ${skipCount} duplicates)`
                 : `AI detected and added ${successCount} student profiles.`;
             showMessage(msg);
@@ -1130,12 +1133,12 @@ async function processAI() {
                     }
                     const qaMatch = Object.keys(item).find(k => k.toLowerCase() === 'qa');
                     if (qaMatch && item[qaMatch] !== undefined && item[qaMatch] !== null && String(item[qaMatch]).trim() !== '') maxScores[key].qa = parseFloat(item[qaMatch]);
-                    
+
                     if (typeof saveMaxScores === 'function') {
                         saveMaxScores();
-                        students.forEach(st => { 
-                            if(typeof recalcStudentSubject === 'function') recalcStudentSubject(st, currentSubjectView); 
-                            if(typeof computeStudentGWA === 'function') computeStudentGWA(st); 
+                        students.forEach(st => {
+                            if (typeof recalcStudentSubject === 'function') recalcStudentSubject(st, currentSubjectView);
+                            if (typeof computeStudentGWA === 'function') computeStudentGWA(st);
                         });
                     }
                     return; // Stop here for max score row
@@ -1706,9 +1709,9 @@ async function showReport(s) {
                     let m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
                     if (m2) guessedYear = 'Grade ' + m2[1];
                 }
-            } catch(e) {}
+            } catch (e) { }
         }
-        
+
         // Fallback: Check adviser
         if (!guessedYear && typeof teachers !== 'undefined') {
             const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(sec));
@@ -1745,19 +1748,19 @@ async function showReport(s) {
 
     // ── Sections dropdown ──
     // Only show the student's enrolled section
-    const sectionOptions = s.section 
+    const sectionOptions = s.section
         ? `<option value="${s.section}" selected>${s.section}</option>`
         : `<option value="" selected>No Section Assigned</option>`;
 
     // Only show the student's enrolled year level and previous grades
     let activeYearsForStudent = new Set(detectedYears);
     if (guessedYear) activeYearsForStudent.add(guessedYear);
-    
+
     let yearsToShow = allYearLevels.filter(y => activeYearsForStudent.has(y));
-    let yearOptions = yearsToShow.map(y => 
+    let yearOptions = yearsToShow.map(y =>
         `<option value="${y}" ${y === guessedYear ? 'selected' : ''}>${y}</option>`
     ).join('');
-    
+
     if (yearsToShow.length === 0) {
         yearOptions = `<option value="" selected disabled>Unknown Year Level</option>`;
     }
@@ -2531,7 +2534,7 @@ async function openAttendanceModal(lrn) {
                 if (Array.isArray(marks)) {
                     currentAbsenceLogs = currentAbsenceLogs.concat(marks);
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
     });
     // Deduplicate and sort
@@ -2546,12 +2549,12 @@ let currentAbsenceLogs = [];
 function renderAbsenceLogs() {
     const container = document.getElementById('absence-logs-container');
     if (!container) return;
-    
+
     if (currentAbsenceLogs.length === 0) {
         container.innerHTML = '<div class="text-[10px] text-gray-400 italic text-center py-2 bg-gray-50 rounded border border-dashed border-gray-200">No specific absence logs recorded yet.</div>';
         return;
     }
-    
+
     container.innerHTML = currentAbsenceLogs.map((log, i) => {
         const dateObj = new Date(log);
         const formatted = isNaN(dateObj) ? log : dateObj.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
@@ -2567,14 +2570,14 @@ function renderAbsenceLogs() {
 function addAbsenceLog() {
     const input = document.getElementById('new-absence-datetime');
     if (!input || !input.value) return showMessage("Please select a valid date and time.", true);
-    
+
     const dt = new Date(input.value).toISOString();
     if (!currentAbsenceLogs.includes(dt)) {
         currentAbsenceLogs.unshift(dt);
         // Sort descending
         currentAbsenceLogs.sort((a, b) => new Date(b) - new Date(a));
         renderAbsenceLogs();
-        
+
         // Auto-increment the absent count for the respective month if possible
         const m = new Date(input.value).toLocaleString('en-US', { month: 'short' });
         const row = document.getElementById(`att-row-${m}`);
@@ -2671,7 +2674,7 @@ async function saveAttendanceRecord() {
 
         const school_days = parseInt(row.querySelector(`[data-field="school_days"]`).value) || 0;
         const days_present = parseInt(row.querySelector(`[data-field="days_present"]`).value) || 0;
-        
+
         // Find logs that belong to this month
         const monthLogs = currentAbsenceLogs.filter(log => {
             const dateObj = new Date(log);
@@ -2766,7 +2769,7 @@ window.activeUndoToasts = {};
 
 function showUndoToast(message, onUndo, onFinalize, timeout = 5000) {
     const toastId = 'undo-' + Date.now();
-    
+
     // Create toast container if not exists
     let container = document.getElementById('toast-container');
     if (!container) {
@@ -2775,7 +2778,7 @@ function showUndoToast(message, onUndo, onFinalize, timeout = 5000) {
         container.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-2';
         document.body.appendChild(container);
     }
-    
+
     // Create toast element
     const toast = document.createElement('div');
     toast.id = toastId;
@@ -2785,9 +2788,9 @@ function showUndoToast(message, onUndo, onFinalize, timeout = 5000) {
         <button id="btn-${toastId}" class="text-primary font-bold hover:text-green-400 transition ml-2">Undo</button>
     `;
     container.appendChild(toast);
-    
+
     let isReverted = false;
-    
+
     const finalizeWrapper = async () => {
         if (isReverted) return;
         delete window.activeUndoToasts[toastId];
@@ -2795,10 +2798,10 @@ function showUndoToast(message, onUndo, onFinalize, timeout = 5000) {
         setTimeout(() => toast.remove(), 300);
         if (onFinalize) await onFinalize();
     };
-    
+
     const timer = setTimeout(finalizeWrapper, timeout);
     window.activeUndoToasts[toastId] = timer;
-    
+
     document.getElementById(`btn-${toastId}`).onclick = async () => {
         isReverted = true;
         clearTimeout(timer);
@@ -2816,7 +2819,7 @@ function showUndoToast(message, onUndo, onFinalize, timeout = 5000) {
 function openGradingWeightsModal(subject) {
     const s = (subject || '').toLowerCase();
     const weights = getSubjectWeights(subject);
-    
+
     const ww = Math.round(weights.ww * 100);
     const pt = Math.round(weights.pt * 100);
     const qa = Math.round(weights.qa * 100);
@@ -2866,10 +2869,10 @@ function updateGradingTotal() {
     const pt = parseInt(document.getElementById('gw-pt').value) || 0;
     const qa = parseInt(document.getElementById('gw-qa').value) || 0;
     const total = ww + pt + qa;
-    
+
     const totalEl = document.getElementById('gw-total');
     const saveBtn = document.getElementById('gw-save-btn');
-    
+
     totalEl.textContent = total + '%';
     if (total === 100) {
         totalEl.className = 'text-sm font-black text-emerald-600';
@@ -2886,15 +2889,15 @@ function saveGradingWeights(subject) {
     const ww = (parseInt(document.getElementById('gw-ww').value) || 0) / 100;
     const pt = (parseInt(document.getElementById('gw-pt').value) || 0) / 100;
     const qa = (parseInt(document.getElementById('gw-qa').value) || 0) / 100;
-    
+
     if (ww + pt + qa !== 1) return;
-    
+
     const s = (subject || '').toLowerCase();
     localStorage.setItem('grading_weights_' + s, JSON.stringify({ ww, pt, qa }));
-    
+
     document.getElementById('grading-weights-modal').remove();
     showPremiumToast('success', 'Grading weights updated for ' + (subject || 'subject'));
-    
+
     // Re-render records view
     if (typeof renderRecords === 'function') {
         renderRecords(document.getElementById('content-area'));
@@ -2904,10 +2907,10 @@ function saveGradingWeights(subject) {
 function resetGradingWeights(subject) {
     const s = (subject || '').toLowerCase();
     localStorage.removeItem('grading_weights_' + s);
-    
+
     document.getElementById('grading-weights-modal').remove();
     showPremiumToast('success', 'Reset to DepEd default weights');
-    
+
     // Re-render records view
     if (typeof renderRecords === 'function') {
         renderRecords(document.getElementById('content-area'));

@@ -21,8 +21,8 @@ function getStudentGradeNumber(s) {
             let m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
             if (m2) return parseInt(m2[1]);
         }
-    } catch(e) {}
-    
+    } catch (e) { }
+
     // Smart dictionary fallback based on CNHS naming conventions
     // Grade 7: Philosophers
     if (/(SOCRATES|PLATO|ARISTOTLE|PYTHAGORAS|CONFUCIUS|PHILOSOPHER)/.test(secName)) return 7;
@@ -47,7 +47,7 @@ window.globalDashSectionFilter = 'All';
 function getBaseDashboardStudents() {
 
     let curr = students;
-    
+
     if (currentUser.role === 'teacher') {
         const handled = currentUser.handledSections || [];
         curr = curr.filter(s => handled.includes(s.section));
@@ -69,7 +69,7 @@ function getBaseDashboardStudents() {
                         const m = secData.year.match(/\b([7-9]|1[0-2])\b/);
                         if (m && parseInt(m[1]) <= 10) return true;
                     }
-                } catch(e) {}
+                } catch (e) { }
                 return false;
             });
         } else if (currentUser.department === 'SHS') {
@@ -89,7 +89,7 @@ function getBaseDashboardStudents() {
                         const m = secData.year.match(/\b([7-9]|1[0-2])\b/);
                         if (m && parseInt(m[1]) >= 11) return true;
                     }
-                } catch(e) {}
+                } catch (e) { }
                 return false;
             });
         }
@@ -99,7 +99,7 @@ function getBaseDashboardStudents() {
 
 function getFilteredDashboardStudents() {
     let curr = getBaseDashboardStudents();
-    
+
     if (window.globalDashGradeFilter && window.globalDashGradeFilter !== 'All') {
         const check = parseInt(window.globalDashGradeFilter.replace('Grade ', ''));
         curr = curr.filter(s => getStudentGradeNumber(s) === check);
@@ -107,11 +107,11 @@ function getFilteredDashboardStudents() {
     if (window.globalDashSectionFilter && window.globalDashSectionFilter !== 'All') {
         curr = curr.filter(s => s.section === window.globalDashSectionFilter);
     }
-    
+
     return curr;
 }
 
-window.onGlobalDashFilterChange = function(el, type) {
+window.onGlobalDashFilterChange = function (el, type) {
     if (type === 'grade') {
         window.globalDashGradeFilter = el.value;
         window.globalDashSectionFilter = 'All'; // reset section if grade changes
@@ -129,9 +129,9 @@ let modalActiveMetric = 'total';
 function updateDashGradeDropdown(selectId) {
     const gradeSelect = document.getElementById(selectId);
     if (!gradeSelect) return;
-    
+
     let curr = getBaseDashboardStudents();
-    
+
     const gradesSet = new Set();
     curr.forEach(s => {
         const gNum = getStudentGradeNumber(s);
@@ -139,8 +139,8 @@ function updateDashGradeDropdown(selectId) {
             gradesSet.add('Grade ' + gNum);
         }
     });
-    
-    const grades = Array.from(gradesSet).sort((a,b) => {
+
+    const grades = Array.from(gradesSet).sort((a, b) => {
         const numA = parseInt(a.replace(/\D/g, '')) || 0;
         const numB = parseInt(b.replace(/\D/g, '')) || 0;
         return numA - numB;
@@ -150,7 +150,7 @@ function updateDashGradeDropdown(selectId) {
     grades.forEach(g => {
         html += `<option value="${g}">${g}</option>`;
     });
-    
+
     if (grades.length === 0 && currentUser.role !== 'teacher') {
         let fallbackGrades = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
         if (currentUser.role === 'curriculum_coordinator') {
@@ -158,7 +158,7 @@ function updateDashGradeDropdown(selectId) {
             else if (currentUser.department === 'SHS') fallbackGrades = ['Grade 11', 'Grade 12'];
         }
         fallbackGrades.forEach(g => {
-             html += `<option value="${g}">${g}</option>`;
+            html += `<option value="${g}">${g}</option>`;
         });
     }
     gradeSelect.innerHTML = html;
@@ -167,36 +167,36 @@ function updateDashGradeDropdown(selectId) {
 function updateDashSectionDropdown(selectId) {
     const secSelect = document.getElementById(selectId);
     if (!secSelect) return;
-    
+
     let curr = getBaseDashboardStudents();
     const gVal = window.globalDashGradeFilter;
     if (gVal !== 'All') {
         const check = parseInt(gVal.replace('Grade ', ''));
         curr = curr.filter(s => getStudentGradeNumber(s) === check);
     }
-    
+
     let combinedSections = Array.from(new Set(curr.map(s => s.section))).filter(Boolean).sort();
-    
+
     let html = '<option value="All">All Sections</option>';
     combinedSections.forEach(sec => {
-         html += `<option value="${sec}">${sec}</option>`;
+        html += `<option value="${sec}">${sec}</option>`;
     });
-    
+
     secSelect.innerHTML = html;
 }
 
 function updateModalGradeDropdown() {
     const gradeSelect = document.getElementById('modal-grade-select');
     if (!gradeSelect) return;
-    
+
     let curr = getFilteredDashboardStudents();
-    
+
     const gradesSet = new Set();
-    
+
     let savedSections = [];
     try {
         savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
-    } catch(e) {}
+    } catch (e) { }
 
     curr.forEach(s => {
         if (s.section) {
@@ -212,8 +212,8 @@ function updateModalGradeDropdown() {
             }
         }
     });
-    
-    const grades = Array.from(gradesSet).sort((a,b) => {
+
+    const grades = Array.from(gradesSet).sort((a, b) => {
         const numA = parseInt(a.replace(/\D/g, '')) || 0;
         const numB = parseInt(b.replace(/\D/g, '')) || 0;
         return numA - numB;
@@ -224,7 +224,7 @@ function updateModalGradeDropdown() {
         const isSelected = (modalGradeLevel === g) ? 'selected' : '';
         html += `<option value="${g}" ${isSelected}>${g}</option>`;
     });
-    
+
     if (grades.length === 0 && currentUser.role !== 'teacher') {
         let fallbackGrades = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
         if (currentUser.role === 'curriculum_coordinator') {
@@ -236,27 +236,27 @@ function updateModalGradeDropdown() {
             html += `<option value="${g}" ${isSelected}>${g}</option>`;
         });
     }
-    
+
     gradeSelect.innerHTML = html;
 }
 
 function updateModalSectionDropdown() {
     const secSelect = document.getElementById('modal-section-select');
     if (!secSelect) return;
-    
+
     let curr = getFilteredDashboardStudents();
 
     let savedSections = [];
     try {
         savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
-    } catch(e) {}
+    } catch (e) { }
 
     if (modalGradeLevel !== 'All') {
         const check = modalGradeLevel.replace('Grade ', '');
         curr = curr.filter(s => {
             const m = (s.section || '').match(/\b([7-9]|1[0-2])\b/);
             if (m && m[1] === check) return true;
-            
+
             const secData = savedSections.find(x => x.name === s.section);
             if (secData && secData.year) {
                 const m2 = secData.year.match(/\b([7-9]|1[0-2])\b/);
@@ -265,9 +265,9 @@ function updateModalSectionDropdown() {
             return false;
         });
     }
-    
+
     const sections = Array.from(new Set(curr.map(s => s.section))).filter(Boolean).sort();
-    
+
     let html = `<option value="All">All Sections</option>`;
     sections.forEach(sec => {
         html += `<option value="${sec}" ${modalSectionFilter === sec ? 'selected' : ''}>${sec}</option>`;
@@ -277,7 +277,7 @@ function updateModalSectionDropdown() {
 
 function onModalGradeChange(val) {
     modalGradeLevel = val;
-    modalSectionFilter = 'All'; 
+    modalSectionFilter = 'All';
     updateModalSectionDropdown();
     renderDrilldownTable();
 }
@@ -291,7 +291,7 @@ function openDrilldownModal(metric) {
     modalActiveMetric = metric;
     modalGradeLevel = 'All';
     modalSectionFilter = 'All';
-    
+
     const titles = {
         'total': 'Total Students',
         'attendance': 'Average Attendance',
@@ -302,19 +302,19 @@ function openDrilldownModal(metric) {
         'performance': 'Section Performance'
     };
     const titleEl = document.getElementById('drilldown-modal-title');
-    if(titleEl) titleEl.innerText = titles[metric] || 'Students';
-    
+    if (titleEl) titleEl.innerText = titles[metric] || 'Students';
+
     updateModalGradeDropdown();
     updateModalSectionDropdown();
     renderDrilldownTable();
-    
+
     const modal = document.getElementById('dash-drilldown-modal');
-    if(modal) modal.classList.remove('hidden');
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closeDrilldownModal() {
     const modal = document.getElementById('dash-drilldown-modal');
-    if(modal) modal.classList.add('hidden');
+    if (modal) modal.classList.add('hidden');
 }
 
 function renderDashboard(area) {
@@ -323,7 +323,7 @@ function renderDashboard(area) {
     dashHasJHS = false;
     dashHasSHS = false;
     let curr = students;
-    
+
     if (currentUser.role === 'teacher') {
         const handled = currentUser.handledSections || [];
         curr = curr.filter(s => handled.includes(s.section));
@@ -343,25 +343,28 @@ function renderDashboard(area) {
         }
     } else if (currentUser.role === 'curriculum_coordinator') {
         if (currentUser.department === 'JHS') {
+            // jhs curriculum coordinator dashboard
             dashHasJHS = true;
             dashHasSHS = false;
         } else if (currentUser.department === 'SHS') {
+            // techpro / academic curriculum coordinator dashbooard
             dashHasJHS = false;
             dashHasSHS = true;
         }
     } else {
+        // principal dashboard
         dashHasJHS = true;
         dashHasSHS = true;
     }
 
     const filteredStudents = getFilteredDashboardStudents();
-    
+
     const evaluated = filteredStudents.filter(s => s.subjects && s.subjects.filter(sub => sub.g !== null).length >= 8).length;
     // At-Risk: overall GWA < 75 or any subject grade < 75
     const atRisk = filteredStudents.filter(s => {
         let hasFailingSubject = false;
         if (s.subjects) {
-             hasFailingSubject = s.subjects.some(sub => parseFloat(sub.g) < 75);
+            hasFailingSubject = s.subjects.some(sub => parseFloat(sub.g) < 75);
         }
         return (s.gwa > 0 && s.gwa < 75) || hasFailingSubject;
     }).length;
@@ -601,13 +604,13 @@ function renderDashboard(area) {
 
     updateDashGradeDropdown('global-dash-grade');
     updateDashSectionDropdown('global-dash-section');
-    
+
     const gSel = document.getElementById('global-dash-grade');
     const sSel = document.getElementById('global-dash-section');
-    if(gSel) gSel.value = window.globalDashGradeFilter;
-    if(sSel) sSel.value = window.globalDashSectionFilter;
+    if (gSel) gSel.value = window.globalDashGradeFilter;
+    if (sSel) sSel.value = window.globalDashSectionFilter;
     refreshTable();
-    initDashboardCharts(); 
+    initDashboardCharts();
 }
 
 function initDashboardCharts() {
@@ -669,9 +672,9 @@ function initDashboardCharts() {
 
         // JHS honors — only for JHS coordinator or admin
         if (dashHasJHS) {
-            if (highest > 0)   { chartLabels.push('Highest Honor'); chartData.push(highest);   chartBg.push('#fef08a'); chartBorder.push('#eab308'); }
-            if (high > 0)      { chartLabels.push('High Honor');    chartData.push(high);       chartBg.push('#e9d5ff'); chartBorder.push('#a855f7'); }
-            if (withHonor > 0) { chartLabels.push('With Honor');    chartData.push(withHonor);  chartBg.push('#bfdbfe'); chartBorder.push('#3b82f6'); }
+            if (highest > 0) { chartLabels.push('Highest Honor'); chartData.push(highest); chartBg.push('#fef08a'); chartBorder.push('#eab308'); }
+            if (high > 0) { chartLabels.push('High Honor'); chartData.push(high); chartBg.push('#e9d5ff'); chartBorder.push('#a855f7'); }
+            if (withHonor > 0) { chartLabels.push('With Honor'); chartData.push(withHonor); chartBg.push('#bfdbfe'); chartBorder.push('#3b82f6'); }
         }
 
         // SHS honors — only for SHS coordinator or admin
@@ -680,8 +683,8 @@ function initDashboardCharts() {
         }
 
         // Common categories — always show if > 0
-        if (regular > 0)  { chartLabels.push('Regular');   chartData.push(regular);  chartBg.push('#f3f4f6'); chartBorder.push('#9ca3af'); }
-        if (failing > 0)  { chartLabels.push('Failing');   chartData.push(failing);  chartBg.push('#fecaca'); chartBorder.push('#ef4444'); }
+        if (regular > 0) { chartLabels.push('Regular'); chartData.push(regular); chartBg.push('#f3f4f6'); chartBorder.push('#9ca3af'); }
+        if (failing > 0) { chartLabels.push('Failing'); chartData.push(failing); chartBg.push('#fecaca'); chartBorder.push('#ef4444'); }
         if (noGrades > 0) { chartLabels.push('No Grades'); chartData.push(noGrades); chartBg.push('#e5e7eb'); chartBorder.push('#d1d5db'); }
 
         // Fallback if everything is 0
@@ -745,8 +748,8 @@ function initDashboardCharts() {
     if (perfCtx) {
         const ctx2d = perfCtx.getContext('2d');
         const gradient = ctx2d.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, '#10b981'); 
-        gradient.addColorStop(1, '#064e3b'); 
+        gradient.addColorStop(0, '#10b981');
+        gradient.addColorStop(1, '#064e3b');
 
         dashboardCharts.push(new Chart(perfCtx, {
             type: 'bar',
@@ -823,14 +826,14 @@ function initDashboardCharts() {
             // Last resort: just use the section name itself
             gradesCount[s.section] = (gradesCount[s.section] || 0) + 1;
         });
-        
-        let labels = Object.keys(gradesCount).sort((a,b) => {
+
+        let labels = Object.keys(gradesCount).sort((a, b) => {
             const numA = parseInt(a.replace(/\D/g, '')) || 9999;
             const numB = parseInt(b.replace(/\D/g, '')) || 9999;
             return numA - numB;
         });
         let data = labels.map(l => gradesCount[l]);
-        
+
         if (labels.length === 0) {
             labels = ['No Data'];
             data = [0];
@@ -921,7 +924,7 @@ async function generateDashboardInsights() {
     const sectionFilter = window.globalDashSectionFilter || 'All';
     let filteredStudents = getFilteredDashboardStudents();
     let summaryData = filteredStudents.map(s => ({ s: s.section, g: s.gwa, a: s.attendance })).filter(s => s.g > 0);
-    
+
     let scopeText = gradeFilter;
     if (sectionFilter !== 'All') scopeText += ' - ' + sectionFilter;
 
@@ -1060,7 +1063,7 @@ function refreshTable(search = '') {
 
         if (activeFilter === 'total') return true;
         if (activeFilter === 'attendance') return s.attendance >= 90;
-        
+
         let isSH = false;
         let isJH = false;
         const gNum = getStudentGradeNumber(s);
@@ -1073,9 +1076,9 @@ function refreshTable(search = '') {
         if (activeFilter === 'academic_excellence') return isSH && s.gwa >= 90 && !hasFailing;
         if (activeFilter === 'risk') {
             let hasFailingSubject = false;
-        if (s.subjects) {
-             hasFailingSubject = s.subjects.some(sub => parseFloat(sub.g) < 75);
-        }
+            if (s.subjects) {
+                hasFailingSubject = s.subjects.some(sub => parseFloat(sub.g) < 75);
+            }
             return (s.gwa > 0 && s.gwa < 75) || hasFailingSubject;
         }
         if (activeFilter === 'eval') return s.subjects && s.subjects.filter(sub => sub.g !== null).length >= 8;
@@ -1087,8 +1090,8 @@ function refreshTable(search = '') {
 
     tbody.innerHTML = filtered.map(s => {
         let isSH = false;
-            const gNum = getStudentGradeNumber(s);
-            if (gNum && gNum >= 11) isSH = true;
+        const gNum = getStudentGradeNumber(s);
+        if (gNum && gNum >= 11) isSH = true;
         const hasFailing = s.subjects && s.subjects.some(sub => parseFloat(sub.g) < 75);
 
         let badge = '<span class="px-2 py-0.5 rounded text-[10px] bg-gray-100 text-gray-500">Regular</span>';
@@ -1169,9 +1172,9 @@ function renderDrilldownTable() {
         if (modalActiveMetric === 'attendance') return true; // Show all students to explain the true average
         if (modalActiveMetric === 'risk') {
             let hasFailingSubject = false;
-        if (s.subjects) {
-             hasFailingSubject = s.subjects.some(sub => parseFloat(sub.g) < 75);
-        }
+            if (s.subjects) {
+                hasFailingSubject = s.subjects.some(sub => parseFloat(sub.g) < 75);
+            }
             return (s.gwa > 0 && s.gwa < 75) || hasFailingSubject;
         }
         if (modalActiveMetric === 'eval') return s.subjects && s.subjects.filter(sub => sub.g !== null).length >= 8;
@@ -1188,7 +1191,7 @@ function renderDrilldownTable() {
 
     if (modalActiveMetric === 'total') {
         table.style.display = 'none';
-        
+
         let gridHtml = '<div id="modal-grid-view" class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">';
         gridHtml += filtered.map(s => {
             return `
@@ -1207,11 +1210,11 @@ function renderDrilldownTable() {
             `;
         }).join('');
         gridHtml += '</div>';
-        
+
         table.insertAdjacentHTML('afterend', gridHtml);
     } else {
         table.style.display = 'table';
-        
+
         tbody.innerHTML = filtered.map(s => {
             let isSH = false;
             const gNum = getStudentGradeNumber(s);
@@ -1235,11 +1238,11 @@ function renderDrilldownTable() {
             } else {
                 badge = '<span class="px-2 py-1 rounded-lg text-[10px] bg-gray-100 text-gray-400 font-bold">No Grades</span>';
             }
-            
+
             if (modalActiveMetric === 'risk') {
                 badge = '<span class="px-2 py-1 rounded-lg text-[10px] bg-red-100 text-red-600 font-bold animate-pulse"><i class="fas fa-exclamation-circle mr-1"></i> Needs Attention</span>';
             }
-            
+
             if (modalActiveMetric === 'eval') {
                 badge = '<span class="px-2 py-1 rounded-lg text-[10px] bg-emerald-100 text-emerald-600 font-bold"><i class="fas fa-check-circle mr-1"></i> Evaluated</span>';
             }
@@ -1276,7 +1279,7 @@ function renderDrilldownTable() {
     }
 }
 
-window.showAtRiskReason = function(lrn) {
+window.showAtRiskReason = function (lrn) {
     const student = students.find(s => String(s.lrn) === String(lrn));
     if (!student) return;
 
@@ -1293,7 +1296,7 @@ window.showAtRiskReason = function(lrn) {
     }
 
     let reasonHTML = '';
-    
+
     if (student.gwa >= 75 && student.gwa <= 79) {
         reasonHTML += `<div class="p-3 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl mb-3 text-sm">
             <strong>Low GWA:</strong> The student's overall average is <strong>${student.gwa}</strong>, which is critically close to failing.
@@ -1323,7 +1326,7 @@ window.showAtRiskReason = function(lrn) {
             <strong>Poor Attendance:</strong> The student's attendance is <strong>${student.attendance}%</strong>, which is below the acceptable 80% threshold.
         </div>`;
     }
-    
+
     if (!reasonHTML) {
         reasonHTML = '<div class="text-gray-500 text-sm text-center italic">No specific failing records found. Check manual evaluations.</div>';
     }
@@ -1385,7 +1388,7 @@ window.showAtRiskReason = function(lrn) {
     });
 };
 
-window.showStudentSummaryModal = function(lrn) {
+window.showStudentSummaryModal = function (lrn) {
     const student = students.find(s => String(s.lrn) === String(lrn));
     if (!student) return;
 
@@ -1422,17 +1425,18 @@ window.showStudentSummaryModal = function(lrn) {
                         </span>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                        ${student.subjects && student.subjects.filter(sub => sub.g !== null).length > 0 ? student.subjects.filter(sub => sub.g !== null).map(subObj => { const sub = subObj.n; const grade = subObj.g;
-                                const isFailing = parseFloat(grade) < 75;
-                                return `
+                        ${student.subjects && student.subjects.filter(sub => sub.g !== null).length > 0 ? student.subjects.filter(sub => sub.g !== null).map(subObj => {
+            const sub = subObj.n; const grade = subObj.g;
+            const isFailing = parseFloat(grade) < 75;
+            return `
                                     <div class="flex justify-between items-center px-3 py-2 rounded-lg bg-gray-50 border border-gray-100 ${isFailing ? 'border-red-200 bg-red-50' : ''}">
                                         <span class="text-xs font-bold text-gray-600 truncate max-w-[140px]" title="${sub}">${sub}</span>
                                         <span class="text-sm font-black ${isFailing ? 'text-red-600' : 'text-gray-800'}">${grade}</span>
                                     </div>
                                 `;
-                            }).join('')
-                            : '<div class="col-span-2 text-center text-xs text-gray-400 py-4 italic">No grades recorded yet.</div>'
-                        }
+        }).join('')
+                : '<div class="col-span-2 text-center text-xs text-gray-400 py-4 italic">No grades recorded yet.</div>'
+            }
                     </div>
                 </div>
             </div>
@@ -1461,7 +1465,7 @@ window.showStudentSummaryModal = function(lrn) {
 let enrollGrade = 'All';
 let enrollSection = 'All';
 
-window.openEnrollmentModal = function() {
+window.openEnrollmentModal = function () {
     enrollGrade = 'All';
     enrollSection = 'All';
     updateEnrollGradeDropdown();
@@ -1478,40 +1482,40 @@ function updateEnrollGradeDropdown() {
         const gNum = getStudentGradeNumber(s);
         if (gNum) gradesSet.add('Grade ' + gNum);
     });
-    const grades = Array.from(gradesSet).sort((a,b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+    const grades = Array.from(gradesSet).sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
     let html = '<option value="All">All Grades</option>';
     grades.forEach(g => { html += `<option value="${g}">${g}</option>`; });
     gradeSelect.innerHTML = html;
 }
 
-window.updateEnrollSectionDropdown = function() {
+window.updateEnrollSectionDropdown = function () {
     const gradeSelect = document.getElementById('enroll-grade-select');
     enrollGrade = gradeSelect.value;
     enrollSection = 'All';
     const secSelect = document.getElementById('enroll-section-select');
     if (!secSelect) return;
-    
+
     let curr = getFilteredDashboardStudents();
     if (enrollGrade !== 'All') {
         const check = parseInt(enrollGrade.replace('Grade ', ''));
         curr = curr.filter(s => getStudentGradeNumber(s) === check);
     }
-    
+
     const sections = Array.from(new Set(curr.map(s => s.section))).filter(Boolean).sort();
     let html = '<option value="All">All Sections</option>';
     sections.forEach(sec => { html += `<option value="${sec}">${sec}</option>`; });
     secSelect.innerHTML = html;
-    
+
     renderEnrollTable();
 };
 
-window.renderEnrollTable = function() {
+window.renderEnrollTable = function () {
     const secSelect = document.getElementById('enroll-section-select');
-    if(secSelect) enrollSection = secSelect.value;
-    
+    if (secSelect) enrollSection = secSelect.value;
+
     const tbody = document.getElementById('enroll-table-body');
     if (!tbody) return;
-    
+
     let filtered = getFilteredDashboardStudents();
     if (enrollGrade !== 'All') {
         const check = parseInt(enrollGrade.replace('Grade ', ''));
@@ -1520,7 +1524,7 @@ window.renderEnrollTable = function() {
     if (enrollSection !== 'All') {
         filtered = filtered.filter(s => s.section === enrollSection);
     }
-    
+
     tbody.innerHTML = filtered.map(s => {
         const adviseTeacher = typeof teachers !== 'undefined' ? teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim()).includes(s.section)) : null;
         const advName = adviseTeacher ? adviseTeacher.name : 'Pending Assignment';
@@ -1539,10 +1543,11 @@ window.renderEnrollTable = function() {
 // --- DISTRIBUTION MODAL LOGIC ---
 let distLevel = 'All';
 
-window.openGradeDistributionModal = function() {
+window.openGradeDistributionModal = function () {
     const levelSelect = document.getElementById('dist-level-select');
-    
+
     let html = '';
+    // principal dashboard
     if (currentUser.role === 'principal') {
         html = `<option value="All">All Levels (JHS & SHS)</option>
                 <option value="JHS">Junior High School (JHS)</option>
@@ -1550,9 +1555,11 @@ window.openGradeDistributionModal = function() {
         distLevel = 'All';
     } else if (currentUser.role === 'curriculum_coordinator') {
         if (currentUser.department === 'JHS') {
+            // jhs curriculum coordinator
             html = `<option value="JHS">Junior High School (JHS)</option>`;
             distLevel = 'JHS';
         } else {
+            // academic curriculum coordinator / techpro
             html = `<option value="SHS">Senior High School (SHS)</option>`;
             distLevel = 'SHS';
         }
@@ -1563,19 +1570,19 @@ window.openGradeDistributionModal = function() {
         distLevel = 'All';
     }
     levelSelect.innerHTML = html;
-    
+
     onDistLevelChange();
     document.getElementById('dash-distribution-modal').classList.remove('hidden');
 };
 
-window.onDistLevelChange = function() {
+window.onDistLevelChange = function () {
     const levelSelect = document.getElementById('dist-level-select');
-    if(levelSelect) distLevel = levelSelect.value;
-    
+    if (levelSelect) distLevel = levelSelect.value;
+
     // Update Honor Dropdown
     const honorSelect = document.getElementById('dist-honor-select');
     let honorHtml = '<option value="All">All Classifications</option>';
-    
+
     if (distLevel === 'JHS') {
         honorHtml += `<option value="highest">Highest Honor</option>
                       <option value="high">High Honor</option>
@@ -1596,45 +1603,45 @@ window.onDistLevelChange = function() {
                       <option value="failing">Failing</option>`;
     }
     honorSelect.innerHTML = honorHtml;
-    
+
     // Update Section Dropdown
     const secSelect = document.getElementById('dist-section-select');
     let curr = getFilteredDashboardStudents();
-    
+
     if (distLevel === 'JHS') {
         curr = curr.filter(s => { const g = getStudentGradeNumber(s); return g && g <= 10; });
     } else if (distLevel === 'SHS') {
         curr = curr.filter(s => { const g = getStudentGradeNumber(s); return g && g >= 11; });
     }
-    
+
     const sections = Array.from(new Set(curr.map(s => s.section))).filter(Boolean).sort();
     let secHtml = '<option value="All">All Sections</option>';
     sections.forEach(sec => { secHtml += `<option value="${sec}">${sec}</option>`; });
     secSelect.innerHTML = secHtml;
-    
+
     renderDistTable();
 };
 
-window.renderDistTable = function() {
+window.renderDistTable = function () {
     const secSelect = document.getElementById('dist-section-select').value;
     const honorSelect = document.getElementById('dist-honor-select').value;
     const tbody = document.getElementById('dist-table-body');
     if (!tbody) return;
-    
+
     let filtered = getFilteredDashboardStudents();
-    
+
     // Filter Level
     if (distLevel === 'JHS') {
         filtered = filtered.filter(s => { const g = getStudentGradeNumber(s); return g && g <= 10; });
     } else if (distLevel === 'SHS') {
         filtered = filtered.filter(s => { const g = getStudentGradeNumber(s); return g && g >= 11; });
     }
-    
+
     // Filter Section
     if (secSelect !== 'All') {
         filtered = filtered.filter(s => s.section === secSelect);
     }
-    
+
     // Filter Honor
     if (honorSelect !== 'All') {
         filtered = filtered.filter(s => {
@@ -1642,7 +1649,7 @@ window.renderDistTable = function() {
             const gNum = getStudentGradeNumber(s);
             const isSH = gNum >= 11;
             const hasFailing = s.subjects && s.subjects.some(sub => parseFloat(sub.g) < 75);
-            
+
             if (honorSelect === 'highest') return !isSH && s.gwa >= 98 && !hasFailing;
             if (honorSelect === 'high') return !isSH && s.gwa >= 95 && s.gwa < 98 && !hasFailing;
             if (honorSelect === 'with') return !isSH && s.gwa >= 90 && s.gwa < 95 && !hasFailing;
@@ -1655,15 +1662,15 @@ window.renderDistTable = function() {
             return true;
         });
     }
-    
+
     // Exclude zero gwa from distribution table
     filtered = filtered.filter(s => s.gwa > 0);
-    
+
     tbody.innerHTML = filtered.map(s => {
         const gNum = getStudentGradeNumber(s);
         const isSH = gNum >= 11;
         const hasFailing = s.subjects && s.subjects.some(sub => parseFloat(sub.g) < 75);
-        
+
         let badge = '<span class="px-2 py-1 rounded-lg text-[10px] bg-gray-100 text-gray-500 font-bold">Regular</span>';
         if (isSH) {
             if (s.gwa >= 90 && !hasFailing) badge = '<span class="px-2 py-1 rounded-lg text-[10px] bg-green-100 text-green-700 font-bold border border-green-200">Academic Excellence</span>';
@@ -1676,7 +1683,7 @@ window.renderDistTable = function() {
             else if (s.gwa >= 75 && !hasFailing) badge = '<span class="px-2 py-1 rounded-lg text-[10px] bg-gray-100 text-gray-500 font-bold">Regular</span>';
             else badge = '<span class="px-2 py-1 rounded-lg text-[10px] bg-red-100 text-red-600 font-bold">Failing</span>';
         }
-        
+
         return `
             <tr onclick="showStudentSummaryModal('${s.lrn}')" class="hover:bg-gray-50 transition cursor-pointer group">
                 <td class="px-6 py-4 font-mono text-gray-400 group-hover:text-primary transition">${s.lrn}</td>
@@ -1694,7 +1701,7 @@ window.renderDistTable = function() {
 let secAvgGradeLevel = 'All';
 let secAvgSectionLevel = 'All';
 
-window.openSectionAverageModal = function() {
+window.openSectionAverageModal = function () {
     secAvgGradeLevel = 'All';
     secAvgSectionLevel = 'All';
     updateSecAvgGradeDropdown();
@@ -1712,7 +1719,7 @@ function updateSecAvgGradeDropdown() {
         const gNum = getStudentGradeNumber(s);
         if (gNum) gradesSet.add('Grade ' + gNum);
     });
-    const grades = Array.from(gradesSet).sort((a,b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+    const grades = Array.from(gradesSet).sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
     let html = '<option value="All">All Grades</option>';
     grades.forEach(g => { html += `<option value="${g}">${g}</option>`; });
     select.innerHTML = html;
@@ -1721,16 +1728,16 @@ function updateSecAvgGradeDropdown() {
     }
 }
 
-window.updateSecAvgSectionDropdown = function() {
+window.updateSecAvgSectionDropdown = function () {
     const secSelect = document.getElementById('section-avg-section-select');
     if (!secSelect) return;
-    
+
     let curr = getFilteredDashboardStudents();
     if (secAvgGradeLevel !== 'All') {
         const check = parseInt(secAvgGradeLevel.replace('Grade ', ''));
         curr = curr.filter(s => getStudentGradeNumber(s) === check);
     }
-    
+
     const sections = Array.from(new Set(curr.map(s => s.section))).filter(Boolean).sort();
     let html = '<option value="All">All Sections</option>';
     sections.forEach(sec => { html += `<option value="${sec}">${sec}</option>`; });
@@ -1739,14 +1746,14 @@ window.updateSecAvgSectionDropdown = function() {
     secAvgSectionLevel = 'All';
 };
 
-window.onSecAvgGradeChange = function() {
+window.onSecAvgGradeChange = function () {
     const select = document.getElementById('section-avg-grade-select');
     if (select) secAvgGradeLevel = select.value;
     updateSecAvgSectionDropdown();
     renderSectionAverageModal();
 };
 
-window.renderSectionAverageModal = function() {
+window.renderSectionAverageModal = function () {
     const gradeSelect = document.getElementById('section-avg-grade-select');
     if (gradeSelect) secAvgGradeLevel = gradeSelect.value;
     const secSelect = document.getElementById('section-avg-section-select');
@@ -1760,7 +1767,7 @@ window.renderSectionAverageModal = function() {
     if (secAvgSectionLevel !== 'All') {
         filtered = filtered.filter(s => s.section === secAvgSectionLevel);
     }
-    
+
     // Group by section
     const sections = {};
     filtered.forEach(s => {
@@ -1776,12 +1783,12 @@ window.renderSectionAverageModal = function() {
     const secArr = Object.values(sections).filter(s => s.count > 0).map(s => {
         s.avg = (s.sum / s.count).toFixed(2);
         // sort students in section by GWA highest to lowest
-        s.students.sort((a,b) => b.gwa - a.gwa);
+        s.students.sort((a, b) => b.gwa - a.gwa);
         return s;
     });
 
     // Sort sections by average GWA highest to lowest
-    secArr.sort((a,b) => b.avg - a.avg);
+    secArr.sort((a, b) => b.avg - a.avg);
 
     const grid = document.getElementById('section-avg-grid');
     if (!grid) return;
@@ -1792,7 +1799,7 @@ window.renderSectionAverageModal = function() {
         const isTop = idx === 0 && secAvgSectionLevel === 'All';
         const medal = isTop ? '<i class="fas fa-medal text-yellow-500 text-xl ml-2 drop-shadow-sm"></i>' : '';
         const bgClass = isTop ? 'bg-gradient-to-br from-yellow-50 to-white border-yellow-200' : 'bg-white border-gray-100';
-        
+
         let topStudentHtml = '';
         if (topStudent) {
             topStudentHtml = `
@@ -1838,7 +1845,7 @@ window.renderSectionAverageModal = function() {
     const insightText = document.getElementById('section-avg-insight-text');
     if (insightText) {
         if (secAvgSectionLevel !== 'All' && secArr.length === 1) {
-             insightText.innerHTML = `Showing performance overview for section <strong>${secArr[0].name}</strong>. The section average is <strong>${secArr[0].avg}</strong>.`;
+            insightText.innerHTML = `Showing performance overview for section <strong>${secArr[0].name}</strong>. The section average is <strong>${secArr[0].avg}</strong>.`;
         }
         else if (secArr.length > 1) {
             const highest = secArr[0];
