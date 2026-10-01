@@ -873,7 +873,11 @@ function renderAdminTeacherList(container) {
 
 function setAdminLevelFilter(level) {
     adminLevelFilter = level;
-    renderAdminTeacherList(document.getElementById('content-area'));
+    if (adminRecordsTab === 'advisory') {
+        renderAdminAdvisoryList(document.getElementById('content-area'));
+    } else {
+        renderAdminTeacherList(document.getElementById('content-area'));
+    }
 }
 
 function switchRecordsTab(tab) {
