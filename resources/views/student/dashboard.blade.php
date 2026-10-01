@@ -187,10 +187,10 @@
                 </div>
 
                 <!-- Academic Risk -->
-                <div onclick="openAcademicModal()"
-                    class="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col justify-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group"
+                <div
+                    onclick="openAcademicStatusModal()"
+                    class="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col justify-center cursor-pointer hover:shadow-lg transition-all duration-300 group hover:-translate-y-1"
                 >
-                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <h3
                         class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1"
                     >
@@ -217,10 +217,10 @@
                 </div>
 
                 <!-- Attendance -->
-                <div onclick="openStudentAttendanceModal()"
-                    class="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col justify-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group"
+                <div
+                    onclick="openAttendanceModal()"
+                    class="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col justify-center cursor-pointer hover:shadow-lg transition-all duration-300 group hover:-translate-y-1"
                 >
-                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <h3
                         class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1"
                     >
@@ -404,6 +404,78 @@
                         Save PIN
                     </button>
                 </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Attendance Modal -->
+    <div id="attendance-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-gray-100">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-blue-50/50">
+                <h3 class="text-lg font-bold text-blue-800 flex items-center gap-2"><i class="fas fa-calendar-check text-blue-500"></i> Attendance Summary</h3>
+                <button onclick="closeAttendanceModal()" class="text-gray-400 hover:text-red-500 transition w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-8 bg-white flex flex-col items-center">
+                <div class="relative w-48 h-48 mb-6">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" stroke="#f1f5f9" stroke-width="12" fill="none" />
+                        <circle id="attendance-circle" cx="50" cy="50" r="40" stroke="#3b82f6" stroke-width="12" fill="none" stroke-dasharray="251.2" stroke-dashoffset="0" stroke-linecap="round" class="transition-all duration-1000 ease-out" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="modal-attendance-percent" class="text-4xl font-black text-gray-800">--%</span>
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Rate</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 w-full">
+                    <div class="bg-green-50 rounded-2xl p-4 text-center border border-green-100">
+                        <p class="text-xs font-bold text-green-500 uppercase tracking-widest mb-1">Present</p>
+                        <p id="modal-days-present" class="text-3xl font-black text-green-700">--</p>
+                        <p class="text-[10px] text-green-600/60 font-bold uppercase mt-1">Days</p>
+                    </div>
+                    <div class="bg-red-50 rounded-2xl p-4 text-center border border-red-100">
+                        <p class="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Absent</p>
+                        <p id="modal-days-absent" class="text-3xl font-black text-red-700">--</p>
+                        <p class="text-[10px] text-red-600/60 font-bold uppercase mt-1">Days</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Academic Status (AI Advisor) Modal -->
+    <div id="academic-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-up border border-gray-100 flex flex-col">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-primary/10 to-transparent">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                        <i class="fas fa-robot text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-gray-800 tracking-tight">AI Academic Advisor</h3>
+                        <p class="text-xs text-primary font-bold uppercase tracking-widest">Performance Insight</p>
+                    </div>
+                </div>
+                <button onclick="closeAcademicStatusModal()" class="text-gray-400 hover:text-red-500 transition w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 bg-gray-50/50 flex-grow">
+                <div class="flex items-start gap-4">
+                    <div class="w-8 h-8 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center flex-shrink-0 mt-1">
+                        <i class="fas fa-sparkles text-accent text-xs"></i>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 relative">
+                        <div id="ai-loading" class="flex items-center gap-2 text-primary font-bold text-sm">
+                            <i class="fas fa-circle-notch fa-spin"></i> Analyzing your records...
+                        </div>
+                        <div id="ai-content" class="hidden text-sm text-gray-600 leading-relaxed space-y-3">
+                            <!-- AI text injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 bg-white border-t border-gray-100 text-center">
+                <p class="text-[10px] text-gray-400 font-medium italic"><i class="fas fa-info-circle mr-1"></i> This insight is generated dynamically based on your current GWA and attendance.</p>
             </div>
         </div>
     </div>

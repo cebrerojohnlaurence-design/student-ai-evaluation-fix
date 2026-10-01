@@ -690,3 +690,100 @@ function openAcademicModal() {
         }
     });
 }
+
+// --- Dynamic Modals Logic ---
+function openAttendanceModal() {
+    document.getElementById('attendance-modal').classList.remove('hidden');
+    
+    // Simulate present/absent from the percentage
+    let att = 0;
+    if (window.studentData && window.studentData.attendance) {
+        att = parseFloat(window.studentData.attendance);
+    }
+    
+    if (att > 0) {
+        const totalDays = 205; // Standard school days in a year
+        const present = Math.round((att / 100) * totalDays);
+        const absent = totalDays - present;
+        
+        document.getElementById('modal-attendance-percent').innerText = att.toFixed(0) + '%';
+        document.getElementById('modal-days-present').innerText = present;
+        document.getElementById('modal-days-absent').innerText = absent;
+        
+        // Animate the circle
+        setTimeout(() => {
+            const circle = document.getElementById('attendance-circle');
+            if (circle) {
+                const circumference = 251.2; // 2 * pi * r (r=40)
+                const offset = circumference - (att / 100) * circumference;
+                circle.style.strokeDashoffset = offset;
+                
+                if (att >= 90) circle.setAttribute('stroke', '#10b981'); // Green
+                else if (att >= 75) circle.setAttribute('stroke', '#f59e0b'); // Yellow
+                else circle.setAttribute('stroke', '#ef4444'); // Red
+            }
+        }, 100);
+    }
+}
+
+function closeAttendanceModal() {
+    document.getElementById('attendance-modal').classList.add('hidden');
+    const circle = document.getElementById('attendance-circle');
+    if (circle) circle.style.strokeDashoffset = 251.2; // reset
+}
+
+function openAcademicStatusModal() {
+    document.getElementById('academic-modal').classList.remove('hidden');
+    
+    const loading = document.getElementById('ai-loading');
+    const content = document.getElementById('ai-content');
+    if(loading) loading.classList.remove('hidden');
+    if(content) content.classList.add('hidden');
+    
+    // Simulate AI thinking delay for realistic UX
+    setTimeout(() => {
+        if(loading) loading.classList.add('hidden');
+        if(content) content.classList.remove('hidden');
+        
+        let gwaText = document.getElementById('student-gwa').innerText;
+        let gwa = parseFloat(gwaText);
+        let risk = document.getElementById('student-risk').innerText;
+        let name = document.getElementById('student-name').innerText.split(',')[0]; // Try to get Last Name or First Name
+        
+        let aiMessage = "";
+        if (isNaN(gwa) || gwaText === '--') {
+            aiMessage = \<p>Hello <strong>\</strong>! I don't have enough data to analyze your performance yet. Once your teachers encode your grades, I'll be able to give you personalized advice!</p>\;
+        } else if (gwa >= 90) {
+            aiMessage = \<p><strong>Fantastic work, \!</strong> Your current GWA is <strong>\</strong>, which places you in the excellent range.</p>
+            <p>Your academic status is marked as <strong>\ Risk</strong>, indicating that you are well on track to achieving great things this year.</p>
+            <p class="font-bold mt-2 text-gray-700">AI Recommendations:</p>
+            <ul class="list-disc pl-4 text-xs mt-1 space-y-1 text-gray-600">
+                <li>Maintain your current study habits; they are clearly working!</li>
+                <li>Consider participating in extracurricular activities or peer-tutoring to broaden your skills and help your classmates.</li>
+            </ul>\;
+        } else if (gwa >= 75) {
+            aiMessage = \<p><strong>You're doing okay, \, but there is room for growth.</strong> Your current GWA is <strong>\</strong>.</p>
+            <p>Your academic status is <strong>\ Risk</strong>. This means you are passing, but you need to be careful not to let your grades slip.</p>
+            <p class="font-bold mt-2 text-gray-700">AI Recommendations:</p>
+            <ul class="list-disc pl-4 text-xs mt-1 space-y-1 text-gray-600">
+                <li>Identify the specific subjects pulling your average down and dedicate 30 extra minutes a day to reviewing them.</li>
+                <li>Don't hesitate to ask your teachers for help if a topic is confusing.</li>
+            </ul>\;
+        } else {
+            aiMessage = \<p><strong>Let's turn things around, \.</strong> Your current GWA is <strong>\</strong>, which requires immediate attention.</p>
+            <p>Your academic status is <strong>\ Risk</strong>.</p>
+            <p class="font-bold mt-2 text-gray-700">AI Recommendations:</p>
+            <ul class="list-disc pl-4 text-xs mt-1 space-y-1 text-gray-600">
+                <li>Please speak with your adviser as soon as possible to create a structured study plan.</li>
+                <li>Make sure to submit all missing requirements and attend remedial classes if available.</li>
+            </ul>\;
+        }
+        
+        if(content) content.innerHTML = aiMessage;
+    }, 1500);
+}
+
+function closeAcademicStatusModal() {
+    document.getElementById('academic-modal').classList.add('hidden');
+}
+
