@@ -495,6 +495,21 @@ async function saveProfileName() {
     const displayNameEl = document.getElementById('user-display-name');
     if (displayNameEl) displayNameEl.innerText = newName;
 
+    if (currentUser.role === 'principal') {
+        if (typeof globalSettings !== 'undefined') {
+            globalSettings.principal_name = newName;
+        }
+        try {
+            await fetch('/api/maintenance/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ principal_name: newName })
+            });
+        } catch (e) {
+            console.warn('Failed to save principal name to settings', e);
+        }
+    }
+
     // If teacher, attempt to save to backend / system_teachers
     if (currentUser.role === 'teacher' || currentUser.role === 'curriculum_coordinator' || currentUser.id.startsWith('T-') || currentUser.id.startsWith('JHS-')) {
         let storedTeachers = JSON.parse(localStorage.getItem('system_teachers') || 'null');
