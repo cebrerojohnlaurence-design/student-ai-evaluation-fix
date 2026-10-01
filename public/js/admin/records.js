@@ -78,7 +78,7 @@ function setRecordQuarter(q) {
                 });
             } else {
                 s.subjects = s.allSubjects.filter(sub => (sub.quarter || 1) == q);
-                s.subjects.forEach(sub => recalcStudentSubject(s, sub.n));
+                // Do not recalculate subjects on quarter switch to preserve DB-fetched grades (like AI Excel uploads)
             }
             computeStudentGWA(s);
         }
@@ -160,7 +160,11 @@ function renderRecords(container) {
     if (adminRecordsTab === 'students') {
         renderAdminStudentsAnalytics(container);
     } else if (adminSelectedSection && adminSelectedTeacher) {
-        renderAdminSectionStudents(container);
+        if (currentSubjectView) {
+            renderDetailedSubjectView(container, currentSubjectView);
+        } else {
+            renderAdminSectionStudents(container);
+        }
     } else if (adminSelectedTeacher) {
         renderAdminTeacherSections(container);
     } else {
