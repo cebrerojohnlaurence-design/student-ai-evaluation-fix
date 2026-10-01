@@ -730,6 +730,7 @@ function initDashboardCharts() {
     // 2. Section Performance (Average GWA)
     const sections = {};
     filteredStudents.forEach(s => {
+        if (!s.section || s.section === 'null' || s.section.trim() === '') return;
         if (!sections[s.section]) sections[s.section] = { sum: 0, count: 0 };
         if (s.gwa > 0) {
             sections[s.section].sum += parseFloat(s.gwa);
@@ -792,38 +793,7 @@ function initDashboardCharts() {
     if (enrollCtx) {
         let gradesCount = {};
         filteredStudents.forEach(s => {
-            if (!s.section) return;
-
-            // Try to extract grade number directly from section name first
-            const match = s.section.match(/\b([7-9]|1[0-2])\b/);
-            if (match) {
-                const g = 'Grade ' + match[1];
-                gradesCount[g] = (gradesCount[g] || 0) + 1;
-                return;
-            }
-
-            // Fallback: look up the adviser teacher to determine JH (7-10) or SH (11-12)
-            if (typeof teachers !== 'undefined') {
-                const adv = teachers.find(t =>
-                    t.is_adviser &&
-                    (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s.section.toLowerCase())
-                );
-                if (adv) {
-                    // JH advisers → label as their actual grade if known, else group as "JHS"
-                    if (adv.level === 'JH') {
-                        const g = 'JHS (' + s.section + ')';
-                        gradesCount[g] = (gradesCount[g] || 0) + 1;
-                    } else if (adv.level === 'SH') {
-                        const g = 'SHS (' + s.section + ')';
-                        gradesCount[g] = (gradesCount[g] || 0) + 1;
-                    } else {
-                        gradesCount[s.section] = (gradesCount[s.section] || 0) + 1;
-                    }
-                    return;
-                }
-            }
-
-            // Last resort: just use the section name itself
+            if (!s.section || s.section === 'null' || s.section.trim() === '') return;
             gradesCount[s.section] = (gradesCount[s.section] || 0) + 1;
         });
 
