@@ -974,7 +974,7 @@ async function processAI() {
     const isSHS = secStr.includes('grade 11') || secStr.includes('grade 12') || secStr.includes('gr 11') || secStr.includes('gr 12') || window.studentsAnalyticsLevel === 'SH';
 
     if (currentMode === 'STUDENT_LIST') {
-        prompt = "Extract student names from this list. Format as JSON array of objects: {name: 'Last, First M.', lrn: 'unique_random_8_digits', section: 'Detected'}. For section, ONLY extract it if it's explicitly a class block or grade level (e.g., 'Grade 10-Einstein' or 'ICT 12'). Do NOT use subject names like 'Business Math' or 'Business Ethics' as the section. If you can't find a valid section name, leave section as null.";
+        prompt = "Extract student names from this list. Format as JSON array of objects: {name: 'Last, First M.', lrn: 'unique_random_8_digits'}. DO NOT extract or assign any section name, leave section as null. Just focus on accurately extracting the full names of the students.";
     } else if (currentMode === 'CLASS_RECORD' && currentSubjectView) {
         let wwFormat = [];
         let ptFormat = [];
@@ -1000,14 +1000,17 @@ async function processAI() {
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
             let targetSheetName = workbook.SheetNames[0];
-            const targetQuarter = window.currentRecordQuarter || 1;
-
-            const qStr1 = isSHS ? `T${targetQuarter}` : `Q${targetQuarter}`;
-            const qStr2 = isSHS ? `TERM ${targetQuarter}` : `QUARTER ${targetQuarter}`;
-            for (let name of workbook.SheetNames) {
-                if (name.toUpperCase().includes(qStr1) || name.toUpperCase().includes(qStr2)) {
-                    targetSheetName = name;
-                    break;
+            
+            // Only search for Quarter/Term sheets if we are extracting grades
+            if (currentMode !== 'STUDENT_LIST') {
+                const targetQuarter = window.currentRecordQuarter || 1;
+                const qStr1 = isSHS ? `T${targetQuarter}` : `Q${targetQuarter}`;
+                const qStr2 = isSHS ? `TERM ${targetQuarter}` : `QUARTER ${targetQuarter}`;
+                for (let name of workbook.SheetNames) {
+                    if (name.toUpperCase().includes(qStr1) || name.toUpperCase().includes(qStr2)) {
+                        targetSheetName = name;
+                        break;
+                    }
                 }
             }
 
