@@ -129,7 +129,7 @@ class StudentController extends Controller
     public function update(Request $request, string $id)
     {
         $student = Student::findOrFail($id);
-        $data = $request->only(['name', 'section', 'adviser', 'attendance', 'status', 'gwa', 'risk']);
+        $data = $request->only(['lrn', 'name', 'section', 'adviser', 'attendance', 'status', 'gwa', 'risk']);
 
         if ($request->has('section') && $request->has('school_year')) {
             $historyRaw = $student->enrollment_history;

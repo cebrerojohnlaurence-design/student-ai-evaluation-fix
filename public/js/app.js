@@ -974,7 +974,7 @@ async function processAI() {
     const isSHS = secStr.includes('grade 11') || secStr.includes('grade 12') || secStr.includes('gr 11') || secStr.includes('gr 12') || window.studentsAnalyticsLevel === 'SH';
 
     if (currentMode === 'STUDENT_LIST') {
-        prompt = "Extract student names from this list. Format as JSON array of objects: {name: 'Last, First M.', lrn: 'unique_random_8_digits'}. DO NOT extract or assign any section name, leave section as null. Just focus on accurately extracting the full names of the students.";
+        prompt = "Extract student names from this list. Format as JSON array of objects: {name: 'Last, First M.', lrn: 'unique_random_12_digits'}. DO NOT extract or assign any section name, leave section as null. Just focus on accurately extracting the full names of the students. LRN must strictly be a 12-digit string.";
     } else if (currentMode === 'CLASS_RECORD' && currentSubjectView) {
         let wwFormat = [];
         let ptFormat = [];
@@ -1099,11 +1099,15 @@ async function processAI() {
                         continue;
                     }
 
-                    const randomLrn = x.lrn || Math.floor(100000000000 + Math.random() * 900000000000).toString();
+                    let validLrn = x.lrn ? String(x.lrn).trim() : '';
+                    if (validLrn.length !== 12 || !/^\d{12}$/.test(validLrn)) {
+                        validLrn = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+                    }
+                    
                     const res = await fetch('/api/students', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                        body: JSON.stringify({ lrn: randomLrn, name: x.name, section: x.section || null, adviser: 'Pending Assignment' })
+                        body: JSON.stringify({ lrn: validLrn, name: x.name, section: x.section || null, adviser: 'Pending Assignment' })
                     });
                     if (res.ok) {
                         const saved = await res.json();

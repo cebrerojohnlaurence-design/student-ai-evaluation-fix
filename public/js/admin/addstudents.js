@@ -323,6 +323,9 @@ function renderAddStudentTable() {
             </td>
             <td class="px-6 py-4">
                 <div class="flex items-center gap-1.5">
+                    <button onclick="editStudentInfo('${s.lrn}')" class="px-2.5 py-1.5 bg-yellow-50 text-yellow-600 rounded-lg text-[10px] font-bold hover:bg-yellow-100 transition border border-yellow-100 flex items-center gap-1">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
                     <button onclick="showReport(students.find(x => x.lrn === '${s.lrn}'))" class="px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-100 transition border border-blue-100 flex items-center gap-1">
                         <i class="fas fa-file-alt"></i> Report
                     </button>
@@ -334,4 +337,73 @@ function renderAddStudentTable() {
         </tr>
     `;
     }).join('');
+}
+
+async function editStudentInfo(lrn) {
+    const s = students.find(x => x.lrn === lrn);
+    if (!s) return;
+
+    const { value: formValues } = await Swal.fire({
+        title: 'Edit Student Info',
+        html:
+            `<div class="space-y-4 text-left p-2">
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase block mb-1">LRN (12 Digits)</label>
+                    <input id="swal-lrn" type="text" class="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-primary" value="${s.lrn}">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Full Name</label>
+                    <input id="swal-name" type="text" class="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-primary" value="${s.name}">
+                    <p class="text-[10px] text-gray-400 mt-1">Format: Last Name, First Name M.I.</p>
+                </div>
+            </div>`,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Save Changes',
+        confirmButtonColor: '#0f321d',
+        preConfirm: () => {
+            const newLrn = document.getElementById('swal-lrn').value.trim();
+            const newName = document.getElementById('swal-name').value.trim();
+            if (!newLrn || newLrn.length !== 12) {
+                Swal.showValidationMessage('LRN must be exactly 12 digits');
+                return false;
+            }
+            if (!newName) {
+                Swal.showValidationMessage('Name cannot be empty');
+                return false;
+            }
+            return { lrn: newLrn, name: newName };
+        }
+    });
+
+    if (formValues) {
+        if (!s.id) {
+            // Local fallback if no DB id
+            s.lrn = formValues.lrn;
+            s.name = formValues.name;
+            renderAddStudentTable();
+            showMessage('Student info updated locally!');
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/students/${s.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ lrn: formValues.lrn, name: formValues.name })
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                s.lrn = updated.lrn || formValues.lrn;
+                s.name = updated.name || formValues.name;
+                renderAddStudentTable();
+                showMessage('Student info updated successfully!');
+            } else {
+                showMessage('Failed to update student info. LRN might already exist.', true);
+            }
+        } catch (e) {
+            showMessage('Network error during update.', true);
+        }
+    }
 }
