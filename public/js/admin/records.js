@@ -574,10 +574,7 @@ function renderAdviserSectionStudents(container) {
             const gwaVal = parseFloat(displayGWA);
             if (!isNaN(gwaVal)) {
                 const isSH = window.currentRecordGradeLevel >= 11;
-                const hasFailing = visibleSubjects.some(subName => {
-                    const subData = (s.subjects || []).find(x => x.n === subName) || (s.allSubjects || []).find(x => x.n === subName);
-                    return subData && subData.g !== null && parseFloat(subData.g) < 75;
-                });
+                const hasFailing = (s.grades && Object.values(s.grades).some(g => parseFloat(g) < 75)) || (s.subjects || []).some(x => x.g !== null && parseFloat(x.g) < 75) || (s.allSubjects || []).some(x => x.g !== null && parseFloat(x.g) < 75);
 
                 if (isSH) {
                     if (gwaVal >= 90 && !hasFailing) {
