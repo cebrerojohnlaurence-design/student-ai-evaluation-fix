@@ -1261,7 +1261,12 @@ function renderAdminTeacherSections(container) {
         const evaluated = secStudents.filter(s =>
             s.subjects && s.subjects.some(sub => subjectList.includes(sub.n) && sub.g !== null && sub.g !== undefined)
         ).length;
-        const atRisk = secStudents.filter(s => (s.gwa > 0 && s.gwa < 75) || (s.subjects || []).some(x => x.g !== null && parseFloat(x.g) < 75) || (s.allSubjects || []).some(x => x.g !== null && parseFloat(x.g) < 75)).length;
+        const atRisk = secStudents.filter(s => {
+            return subjectList.some(subName => {
+                const subData = (s.subjects || []).find(x => x.n === subName) || (s.allSubjects || []).find(x => x.n === subName);
+                return subData && subData.g !== null && parseFloat(subData.g) < 75;
+            });
+        }).length;
 
         return `
                             <div
