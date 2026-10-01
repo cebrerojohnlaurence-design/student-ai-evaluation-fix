@@ -384,7 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('student-attendance').innerText = "--";
         }
     }
-});
 
     // --- Profile Upload Logic ---
     function triggerProfileUpload() {
@@ -392,318 +391,243 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleProfileUpload(input) {
-                if (!input.files || !input.files[0]) return;
+        if (!input.files || !input.files[0]) return;
 
-                const file = input.files[0];
-                const imgElement = document.getElementById('profile-avatar');
-                const originalSrc = imgElement.src;
-                imgElement.style.opacity = '0.5';
+        const file = input.files[0];
+        const imgElement = document.getElementById('profile-avatar');
+        const originalSrc = imgElement.src;
+        imgElement.style.opacity = '0.5';
 
-                try {
-                    const compressedBlob = await compressImage(file, 400);
+        try {
+            const compressedBlob = await compressImage(file, 400);
 
-                    const formData = new FormData();
-                    const student = getStudentSession();
-                    formData.append('id', student.id);
-                    formData.append('image', compressedBlob, 'profile.webp');
+            const formData = new FormData();
+            const student = getStudentSession();
+            formData.append('id', student.id);
+            formData.append('image', compressedBlob, 'profile.webp');
 
-                    const res = await fetch('/api/students/upload-profile', {
-                        method: 'POST',
-                        headers: { 'Accept': 'application/json' },
-                        body: formData
-                    });
-
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.error || 'Upload failed.');
-
-                    // Success
-                    student.profile_picture = data.path;
-                    sessionStorage.setItem('cnhs_student_session', JSON.stringify(student));
-
-                    imgElement.src = data.path;
-                    imgElement.style.opacity = '1';
-
-                } catch (e) {
-                    console.error(e);
-                    imgElement.src = originalSrc;
-                    imgElement.style.opacity = '1';
-                    alert("Profile update failed: " + e.message);
-                }
-            }
-
-function compressImage(file, maxSize) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = event => {
-                        const img = new Image();
-                        img.src = event.target.result;
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            let width = img.width;
-                            let height = img.height;
-
-                            if (width > height) {
-                                if (width > maxSize) { height *= maxSize / width; width = maxSize; }
-                            } else {
-                                if (height > maxSize) { width *= maxSize / height; height = maxSize; }
-                            }
-
-                            canvas.width = width; canvas.height = height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, width, height);
-
-                            canvas.toBlob(blob => resolve(blob), 'image/webp', 0.8);
-                        };
-                        img.onerror = () => reject(new Error("Failed to read image."));
-                    };
-                    reader.onerror = () => reject(new Error("File reader error."));
-                });
-            }
-
-// --- QR PIN Logic ---
-function openQrPinModal() {
-                document.getElementById('qr-pin-input').value = '';
-                document.getElementById('qr-pin-error').classList.add('hidden');
-                document.getElementById('qr-pin-modal').classList.remove('hidden');
-                document.getElementById('qr-pin-input').focus();
-            }
-
-function closeQrPinModal() {
-                document.getElementById('qr-pin-modal').classList.add('hidden');
-            }
-
-async function saveQrPin() {
-                const pin = document.getElementById('qr-pin-input').value;
-                const err = document.getElementById('qr-pin-error');
-                err.classList.add('hidden');
-
-                if (pin.length !== 6 || !/^\d+$/.test(pin)) {
-                    err.innerText = "PIN must be exactly 6 numeric digits.";
-                    err.classList.remove('hidden');
-                    return;
-                }
-
-                const btn = document.getElementById('qr-pin-save-btn');
-                const ogText = btn.innerText;
-                btn.innerText = "Saving...";
-                btn.disabled = true;
-
-                try {
-                    const student = getStudentSession();
-                    const res = await fetch('/api/students/setup-qr-pin', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ lrn: student.lrn, pin: pin })
-                    });
-
-                    let data;
-                    try {
-                        data = await res.json();
-                    } catch (je) {
-                        throw new Error("Server error: Unable to parse response.");
-                    }
-
-                    if (!res.ok) {
-                        console.error("PIN Save Error Data:", data);
-                        throw new Error(data.error || data.message || "Failed to save PIN.");
-                    }
-
-                    // Update session state
-                    student.has_qr_pin = true;
-                    sessionStorage.setItem('cnhs_student_session', JSON.stringify(student));
-
-                    document.getElementById('pin-status-text').innerText = 'Change QR PIN';
-                    document.getElementById('pin-status-text').previousElementSibling.className = 'fas fa-fingerprint text-green-500';
-
-                    closeQrPinModal();
-
-                } catch (e) {
-                    err.innerText = e.message;
-                    err.classList.remove('hidden');
-                } finally {
-                    btn.innerText = ogText;
-                    btn.disabled = false;
-                }
-            }
-
-
-
-
-
-
-
-
-// --- Dynamic Modals Logic ---
-function openAttendanceModal() {
-    document.getElementById('attendance-modal').classList.remove('hidden');
-
-    // Simulate present/absent from the percentage
-    let att = 0;
-    if (window.studentData && window.studentData.attendance) {
-        att = parseFloat(window.studentData.attendance);
-    }
-
-    if (att > 0) {
-        const totalDays = 205; // Standard school days in a year
-        const present = Math.round((att / 100) * totalDays);
-        const absent = totalDays - present;
-
-        document.getElementById('modal-attendance-percent').innerText = att.toFixed(0) + '%';
-        document.getElementById('modal-days-present').innerText = present;
-        document.getElementById('modal-days-absent').innerText = absent;
-
-        // Animate the circle
-        setTimeout(() => {
-            const circle = document.getElementById('attendance-circle');
-            if (circle) {
-                const circumference = 251.2; // 2 * pi * r (r=40)
-                const offset = circumference - (att / 100) * circumference;
-                circle.style.strokeDashoffset = offset;
-
-                if (att >= 95) circle.setAttribute('stroke', '#10b981'); // Green
-                else if (att >= 85) circle.setAttribute('stroke', '#3b82f6'); // Blue
-                else if (att >= 75) circle.setAttribute('stroke', '#f59e0b'); // Yellow
-                else circle.setAttribute('stroke', '#ef4444'); // Red
-            }
-        }, 100);
-
-        // Generate Monthly Breakdown (Simulation for UI)
-        const months = ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
-        const daysPerMonth = [20, 21, 22, 20, 15, 21, 20, 22, 21, 23];
-        
-        let remainingAbsences = absent;
-        const monthlyAbsences = new Array(10).fill(0);
-        
-        // Randomly distribute absences
-        while (remainingAbsences > 0) {
-            let m = Math.floor(Math.random() * 10);
-            if (monthlyAbsences[m] < daysPerMonth[m]) {
-                monthlyAbsences[m]++;
-                remainingAbsences--;
-            }
-        }
-
-        const barsContainer = document.getElementById('monthly-attendance-bars');
-        const labelsContainer = document.getElementById('monthly-attendance-labels');
-        
-        if (barsContainer && labelsContainer) {
-            barsContainer.innerHTML = '';
-            labelsContainer.innerHTML = '';
-
-            months.forEach((month, index) => {
-                const totalM = daysPerMonth[index];
-                const absM = monthlyAbsences[index];
-                const presM = totalM - absM;
-                const percentM = (presM / totalM) * 100;
-                
-                let barColor = 'bg-blue-500';
-                if (percentM >= 95) barColor = 'bg-green-500';
-                else if (percentM < 75) barColor = 'bg-red-400';
-                else if (percentM < 85) barColor = 'bg-yellow-400';
-
-                // Bar wrapper
-                const barWrapper = document.createElement('div');
-                barWrapper.className = 'w-full flex flex-col justify-end items-center h-full group relative';
-                
-                // Tooltip
-                const tooltip = document.createElement('div');
-                tooltip.className = 'absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-[10px] py-1 px-2 rounded font-medium whitespace-nowrap z-50 pointer-events-none';
-                tooltip.innerText = `${presM}/${totalM} Days`;
-                
-                // Actual bar
-                const bar = document.createElement('div');
-                bar.className = `w-4 sm:w-6 rounded-t-sm transition-all duration-1000 ease-out ${barColor} shadow-sm`;
-                bar.style.height = '0%'; // Start at 0 for animation
-
-                // Label
-                const label = document.createElement('div');
-                label.className = 'w-full text-center truncate';
-                label.innerText = month;
-
-                barWrapper.appendChild(tooltip);
-                barWrapper.appendChild(bar);
-                barsContainer.appendChild(barWrapper);
-                labelsContainer.appendChild(label);
-
-                // Animate bar height
-                setTimeout(() => {
-                    bar.style.height = `${percentM}%`;
-                }, 100 + (index * 50));
+            const res = await fetch('/api/students/upload-profile', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: formData
             });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Upload failed.');
+
+            // Success
+            student.profile_picture = data.path;
+            sessionStorage.setItem('cnhs_student_session', JSON.stringify(student));
+
+            imgElement.src = data.path;
+            imgElement.style.opacity = '1';
+
+        } catch (e) {
+            console.error(e);
+            imgElement.src = originalSrc;
+            imgElement.style.opacity = '1';
+            alert("Profile update failed: " + e.message);
         }
     }
-}
 
-function closeAttendanceModal() {
-    document.getElementById('attendance-modal').classList.add('hidden');
-    const circle = document.getElementById('attendance-circle');
-    if (circle) circle.style.strokeDashoffset = 251.2; // reset
-    
-    // Reset bars
-    const barsContainer = document.getElementById('monthly-attendance-bars');
-    if (barsContainer) {
-        const bars = barsContainer.querySelectorAll('.rounded-t-sm');
-        bars.forEach(b => b.style.height = '0%');
+    function compressImage(file, maxSize) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = event => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+                    } else {
+                        if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                    }
+
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob(blob => resolve(blob), 'image/webp', 0.8);
+                };
+                img.onerror = () => reject(new Error("Failed to read image."));
+            };
+            reader.onerror = () => reject(new Error("File reader error."));
+        });
     }
-}
 
-function openAcademicStatusModal() {
-                document.getElementById('academic-modal').classList.remove('hidden');
+    // --- QR PIN Logic ---
+    function openQrPinModal() {
+        document.getElementById('qr-pin-input').value = '';
+        document.getElementById('qr-pin-error').classList.add('hidden');
+        document.getElementById('qr-pin-modal').classList.remove('hidden');
+        document.getElementById('qr-pin-input').focus();
+    }
 
-                const loading = document.getElementById('ai-loading');
-                const content = document.getElementById('ai-content');
-                if (loading) loading.classList.remove('hidden');
-                if (content) content.classList.add('hidden');
+    function closeQrPinModal() {
+        document.getElementById('qr-pin-modal').classList.add('hidden');
+    }
 
-                // Simulate AI thinking delay for realistic UX
-                setTimeout(() => {
-                    if (loading) loading.classList.add('hidden');
-                    if (content) content.classList.remove('hidden');
+    async function saveQrPin() {
+        const pin = document.getElementById('qr-pin-input').value;
+        const err = document.getElementById('qr-pin-error');
+        err.classList.add('hidden');
 
-                    let gwaText = document.getElementById('student-gwa').innerText;
-                    let gwa = parseFloat(gwaText);
-                    let risk = document.getElementById('student-risk').innerText;
-                    let name = document.getElementById('student-name').innerText.split(',')[0]; // Try to get Last Name or First Name
-                    let aiMessage = "";
-                    if (isNaN(gwa) || gwaText === '--') {
-                        aiMessage = `<p>Hello <strong>${name}</strong>! I don't have enough data to analyze your performance yet. Once your teachers encode your grades, I'll be able to give you personalized advice!</p>`;
-                    } else if (gwa >= 90) {
-                        aiMessage = `<p><strong>Fantastic work, ${name}!</strong> Your current GWA is <strong>${gwa.toFixed(2)}</strong>, which places you in the excellent range.</p>
+        if (pin.length !== 6 || !/^\d+$/.test(pin)) {
+            err.innerText = "PIN must be exactly 6 numeric digits.";
+            err.classList.remove('hidden');
+            return;
+        }
+
+        const btn = document.getElementById('qr-pin-save-btn');
+        const ogText = btn.innerText;
+        btn.innerText = "Saving...";
+        btn.disabled = true;
+
+        try {
+            const student = getStudentSession();
+            const res = await fetch('/api/students/setup-qr-pin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ lrn: student.lrn, pin: pin })
+            });
+
+            let data;
+            try {
+                data = await res.json();
+            } catch (je) {
+                throw new Error("Server error: Unable to parse response.");
+            }
+
+            if (!res.ok) {
+                console.error("PIN Save Error Data:", data);
+                throw new Error(data.error || data.message || "Failed to save PIN.");
+            }
+
+            // Update session state
+            student.has_qr_pin = true;
+            sessionStorage.setItem('cnhs_student_session', JSON.stringify(student));
+
+            document.getElementById('pin-status-text').innerText = 'Change QR PIN';
+            document.getElementById('pin-status-text').previousElementSibling.className = 'fas fa-fingerprint text-green-500';
+
+            closeQrPinModal();
+
+        } catch (e) {
+            err.innerText = e.message;
+            err.classList.remove('hidden');
+        } finally {
+            btn.innerText = ogText;
+            btn.disabled = false;
+        }
+    }
+
+
+
+
+
+
+
+
+    // --- Dynamic Modals Logic ---
+    function openAttendanceModal() {
+        document.getElementById('attendance-modal').classList.remove('hidden');
+
+        // Simulate present/absent from the percentage
+        let att = 0;
+        if (window.studentData && window.studentData.attendance) {
+            att = parseFloat(window.studentData.attendance);
+        }
+
+        if (att > 0) {
+            const totalDays = 205; // Standard school days in a year
+            const present = Math.round((att / 100) * totalDays);
+            const absent = totalDays - present;
+
+            document.getElementById('modal-attendance-percent').innerText = att.toFixed(0) + '%';
+            document.getElementById('modal-days-present').innerText = present;
+            document.getElementById('modal-days-absent').innerText = absent;
+
+            // Animate the circle
+            setTimeout(() => {
+                const circle = document.getElementById('attendance-circle');
+                if (circle) {
+                    const circumference = 251.2; // 2 * pi * r (r=40)
+                    const offset = circumference - (att / 100) * circumference;
+                    circle.style.strokeDashoffset = offset;
+
+                    if (att >= 90) circle.setAttribute('stroke', '#10b981'); // Green
+                    else if (att >= 75) circle.setAttribute('stroke', '#f59e0b'); // Yellow
+                    else circle.setAttribute('stroke', '#ef4444'); // Red
+                }
+            }, 100);
+        }
+    }
+
+    function closeAttendanceModal() {
+        document.getElementById('attendance-modal').classList.add('hidden');
+        const circle = document.getElementById('attendance-circle');
+        if (circle) circle.style.strokeDashoffset = 251.2; // reset
+    }
+
+    function openAcademicStatusModal() {
+        document.getElementById('academic-modal').classList.remove('hidden');
+
+        const loading = document.getElementById('ai-loading');
+        const content = document.getElementById('ai-content');
+        if (loading) loading.classList.remove('hidden');
+        if (content) content.classList.add('hidden');
+
+        // Simulate AI thinking delay for realistic UX
+        setTimeout(() => {
+            if (loading) loading.classList.add('hidden');
+            if (content) content.classList.remove('hidden');
+
+            let gwaText = document.getElementById('student-gwa').innerText;
+            let gwa = parseFloat(gwaText);
+            let risk = document.getElementById('student-risk').innerText;
+            let name = document.getElementById('student-name').innerText.split(',')[0]; // Try to get Last Name or First Name
+            let aiMessage = "";
+            if (isNaN(gwa) || gwaText === '--') {
+                aiMessage = `<p>Hello <strong>${name}</strong>! I don't have enough data to analyze your performance yet. Once your teachers encode your grades, I'll be able to give you personalized advice!</p>`;
+            } else if (gwa >= 90) {
+                aiMessage = `<p><strong>Fantastic work, ${name}!</strong> Your current GWA is <strong>${gwa.toFixed(2)}</strong>, which places you in the excellent range.</p>
             <p>Your academic status is marked as <strong>${risk} Risk</strong>, indicating that you are well on track to achieving great things this year.</p>
             <p class="font-bold mt-2 text-gray-700">AI Recommendations:</p>
             <ul class="list-disc pl-4 text-xs mt-1 space-y-1 text-gray-600">
                 <li>Maintain your current study habits; they are clearly working!</li>
                 <li>Consider participating in extracurricular activities or peer-tutoring to broaden your skills and help your classmates.</li>
             </ul>`;
-                    } else if (gwa >= 75) {
-                        aiMessage = `<p><strong>You're doing okay, ${name}, but there is room for growth.</strong> Your current GWA is <strong>${gwa.toFixed(2)}</strong>.</p>
+            } else if (gwa >= 75) {
+                aiMessage = `<p><strong>You're doing okay, ${name}, but there is room for growth.</strong> Your current GWA is <strong>${gwa.toFixed(2)}</strong>.</p>
             <p>Your academic status is <strong>${risk} Risk</strong>. This means you are passing, but you need to be careful not to let your grades slip.</p>
             <p class="font-bold mt-2 text-gray-700">AI Recommendations:</p>
             <ul class="list-disc pl-4 text-xs mt-1 space-y-1 text-gray-600">
                 <li>Identify the specific subjects pulling your average down and dedicate 30 extra minutes a day to reviewing them.</li>
                 <li>Don't hesitate to ask your teachers for help if a topic is confusing.</li>
             </ul>`;
-                    } else {
-                        aiMessage = `<p><strong>Let's turn things around, ${name}.</strong> Your current GWA is <strong>${gwa.toFixed(2)}</strong>, which requires immediate attention.</p>
+            } else {
+                aiMessage = `<p><strong>Let's turn things around, ${name}.</strong> Your current GWA is <strong>${gwa.toFixed(2)}</strong>, which requires immediate attention.</p>
             <p>Your academic status is <strong>${risk} Risk</strong>.</p>
             <p class="font-bold mt-2 text-gray-700">AI Recommendations:</p>
             <ul class="list-disc pl-4 text-xs mt-1 space-y-1 text-gray-600">
                 <li>Please speak with your adviser as soon as possible to create a structured study plan.</li>
                 <li>Make sure to submit all missing requirements and attend remedial classes if available.</li>
             </ul>`;
-                    }
+            }
 
-                    if (content) content.innerHTML = aiMessage;
-                }, 1500);
-}
+            if (content) content.innerHTML = aiMessage;
+        }, 1500);
+    }
 
-function closeAcademicStatusModal() {
-    document.getElementById('academic-modal').classList.add('hidden');
-}
-
-
-
+    function closeAcademicStatusModal() {
+        document.getElementById('academic-modal').classList.add('hidden');
+    }
+});

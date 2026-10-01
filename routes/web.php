@@ -33,6 +33,7 @@ $adminRoutes = function () {
     Route::get('/activity-logs',    [AdminController::class, 'activityLogs'])->name('activity-logs');
     Route::get('/subjects',         [AdminController::class, 'settings'])->name('subjects'); // Currently maps to settings/placeholder or could just return dashboard if view is SPA
     Route::get('/analytics',        [AdminController::class, 'analytics'])->name('analytics');
+    Route::get('/enrollment',       [AdminController::class, 'assignSection'])->name('enrollment');
     Route::get('/settings',         [AdminController::class, 'settings'])->name('settings');
 };
 

@@ -677,6 +677,7 @@ function navigate(view, skipPush = false) {
             'manage-teachers': 'manage-teachers',
             'subjects': 'subjects',
             'assign-section': 'assign-section',
+            'enrollment': 'enrollment',
             'logs': 'activity-logs',
             'settings': 'settings',
             'maintenance': 'settings', // Since there's no backend blade for maintenance we use settings route or just dashboard route as anchor
@@ -726,6 +727,7 @@ function navigate(view, skipPush = false) {
             case 'manage-teachers': renderManageTeachers(area); break;
             case 'subjects': renderSubjects(area); break;
             case 'assign-section': renderAssignSection(area); break;
+            case 'enrollment': if(typeof renderEnrollment === 'function') renderEnrollment(area); break;
 
             case 'logs': renderLogs(area); break;
             case 'settings': renderSettings(area); break;
