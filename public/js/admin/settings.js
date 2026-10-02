@@ -72,9 +72,10 @@ function renderSettings(container) {
                             <button onclick="switchSettingsTab('security')" class="settings-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
                                 <i class="fas fa-shield-alt"></i> Security & Password
                             </button>
+                            ${currentUser.role === 'teacher' ? `
                             <button onclick="switchSettingsTab('qrcode')" class="settings-tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all">
                                 <i class="fas fa-qrcode"></i> My QR Code
-                            </button>
+                            </button>` : ''}
                         </nav>
                     </div>
                 </div>
@@ -191,13 +192,14 @@ function switchSettingsTab(tab) {
         let newContent = '';
         if (tab === 'profile') newContent = renderProfileTab();
         else if (tab === 'security') newContent = renderSecurityTab();
-        else if (tab === 'qrcode') newContent = renderQrCodeTab();
+        else if (tab === 'qrcode' && currentUser.role === 'teacher') newContent = renderQrCodeTab();
+        else if (tab === 'qrcode') return; // Principal/Coordinator: no QR access
         
         content.innerHTML = newContent;
         content.classList.remove('opacity-0', 'translate-y-4');
         content.classList.add('opacity-100', 'translate-y-0', 'transition-all', 'duration-300');
         
-        if (tab === 'qrcode') generateTeacherQrCode();
+        if (tab === 'qrcode' && currentUser.role === 'teacher') generateTeacherQrCode();
     }, 150);
 }
 

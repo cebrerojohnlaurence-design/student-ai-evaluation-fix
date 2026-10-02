@@ -302,7 +302,8 @@ function getMaintenanceTabContent(tabId) {
                         </div>
                         <select id="active-gp-select" class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-bold py-3 px-4 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 appearance-none transition-all cursor-pointer">
                             ${(function() {
-                                let gpList = ['1', '2', '3', '4'];
+                                const isSHS = currentUser && currentUser.department === 'SHS';
+                                let gpList = isSHS ? ['1', '2', '3'] : ['1', '2', '3', '4'];
                                 if (globalSettings['grading_periods']) {
                                     try {
                                         let parsed = JSON.parse(globalSettings['grading_periods']);
@@ -310,7 +311,10 @@ function getMaintenanceTabContent(tabId) {
                                     } catch(e){}
                                 }
                                 let active = globalSettings['active_gp'] || '1';
-                                return gpList.map(gp => `<option value="${gp}" ${gp === active ? 'selected' : ''}>${gp}${gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th'} Quarter</option>`).join('');
+                                return gpList.map(gp => {
+                                    let label = isSHS ? `Term ${gp}` : `${gp}${gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th'} Quarter`;
+                                    return `<option value="${gp}" ${gp === active ? 'selected' : ''}>${label}</option>`;
+                                }).join('');
                             })()}
                         </select>
                         <button onclick="saveActiveGradingPeriod()" class="mt-4 w-full py-3 bg-blue-100 text-blue-700 font-bold rounded-xl hover:bg-blue-200 transition-colors text-sm">Update Period</button>
@@ -989,7 +993,9 @@ function saveSystemPrefs() {
 }
 
 function promptNewGradingPeriod() {
-    const newGP = prompt("Enter new Grading Period number (e.g., 5):", "5");
+    const isSHS = currentUser && currentUser.department === 'SHS';
+    const unit = isSHS ? 'Term' : 'Quarter';
+    const newGP = prompt(`Enter new ${unit} number (e.g., ${isSHS ? '4' : '5'}):`, isSHS ? "4" : "5");
     if (newGP) {
         if (isNaN(newGP) || newGP < 1) {
             showPremiumToast('error', 'Invalid format. Please enter a positive number.');
@@ -1003,23 +1009,25 @@ function promptNewGradingPeriod() {
         });
 
         if (exists) {
-            showPremiumToast('warning', 'Grading period already exists.');
+            showPremiumToast('warning', `${unit} already exists.`);
             return;
         }
 
         const option = document.createElement('option');
         option.value = newGP;
-        option.text = newGP + (newGP == 1 ? 'st' : newGP == 2 ? 'nd' : newGP == 3 ? 'rd' : 'th') + ' Quarter';
+        option.text = isSHS ? `Term ${newGP}` : newGP + (newGP == 1 ? 'st' : newGP == 2 ? 'nd' : newGP == 3 ? 'rd' : 'th') + ' Quarter';
         select.add(option);
         select.value = newGP;
         
         let gps = [];
         Array.from(select.options).forEach(opt => gps.push(opt.value));
-        saveSettingsData({ grading_periods: JSON.stringify(gps) }, `Quarter ${newGP} added successfully!`);
+        saveSettingsData({ grading_periods: JSON.stringify(gps) }, `${unit} ${newGP} added successfully!`);
     }
 }
 
 function promptDeleteGradingPeriod() {
+    const isSHS = currentUser && currentUser.department === 'SHS';
+    const unit = isSHS ? 'Term' : 'Quarter';
     const select = document.getElementById('active-gp-select');
     if (select.options.length <= 1) {
         showPremiumToast('error', 'Cannot delete the only remaining grading period.');
@@ -1027,13 +1035,13 @@ function promptDeleteGradingPeriod() {
     }
     
     const gpToDelete = select.value;
-    if (confirm(`Are you sure you want to delete Quarter ${gpToDelete}?`)) {
+    if (confirm(`Are you sure you want to delete ${unit} ${gpToDelete}?`)) {
         const option = select.options[select.selectedIndex];
         select.removeChild(option);
         
         let gps = [];
         Array.from(select.options).forEach(opt => gps.push(opt.value));
-        saveSettingsData({ grading_periods: JSON.stringify(gps) }, `Quarter ${gpToDelete} deleted successfully!`);
+        saveSettingsData({ grading_periods: JSON.stringify(gps) }, `${unit} ${gpToDelete} deleted successfully!`);
     }
 }
 

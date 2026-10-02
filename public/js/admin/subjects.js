@@ -195,15 +195,16 @@ function renderSHSubjects(area) {
     }
 
     var semTabs = '';
-    for (var sem = 1; sem <= 2; sem++) {
+    for (var sem = 1; sem <= 3; sem++) {
+        var termLabel = sem === 1 ? 'Term 1' : sem === 2 ? 'Term 2' : 'Term 3';
         semTabs +=
             '<button onclick="setSubjectSem(' + sem + ')" class="px-4 py-2 rounded-lg text-xs font-bold transition ' +
             (subPageSem === sem ? 'bg-primary text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-primary hover:text-primary') +
-            '">' + (sem === 1 ? '1st Semester (Q1+Q2)' : '2nd Semester (Q3+Q4)') + '</button>';
+            '">' + termLabel + '</button>';
     }
 
-    var subjectKey = 'SH_' + subPageStrand + '_' + subPageGrade + '_sem' + subPageSem;
-    var semKey = subPageSem === 1 ? 'sem1' : 'sem2';
+    var subjectKey = 'SH_' + subPageStrand + '_' + subPageGrade + '_term' + subPageSem;
+    var semKey = 'term' + subPageSem;
     var subjects = [];
     try {
         var custom = JSON.parse(localStorage.getItem('cnhs_subject_catalog_custom') || '{}');
@@ -232,7 +233,7 @@ function renderSHSubjects(area) {
     } else {
         var listHtml2 = '';
         if (subjects.length === 0) {
-            listHtml2 = '<li class="py-10 text-center text-gray-400 italic text-sm">No subjects for this semester yet.</li>';
+            listHtml2 = '<li class="py-10 text-center text-gray-400 italic text-sm">No subjects for this term yet.</li>';
         } else {
             for (var j = 0; j < subjects.length; j++) {
                 var subj = subjects[j];
@@ -264,7 +265,7 @@ function renderSHSubjects(area) {
         '<div>' +
         '<div class="flex items-center gap-2 mb-1">' +
         '<span class="px-2.5 py-0.5 ' + c2.bg + ' text-white text-[10px] font-bold rounded-full">' + subPageStrand + '</span>' +
-        '<span class="text-xs text-gray-400">Grade ' + subPageGrade + ' · ' + (subPageSem === 1 ? '1st Semester' : '2nd Semester') + '</span>' +
+        '<span class="text-xs text-gray-400">Grade ' + subPageGrade + ' · ' + 'Term ' + subPageSem + '</span>' +
         '</div>' +
         '<h3 class="font-bold text-gray-800">' + subPageStrand + ' — Grade ' + subPageGrade + ' Subject List</h3>' +
         '</div>' +
@@ -298,11 +299,12 @@ function getCustomSubjectList(key) {
         }
         return SUBJECT_CATALOG.JH.subjects.slice();
     }
-    var parts = key.match(/^SH_(\w+)_(\d+)_sem(\d)$/);
+    var parts = key.match(/^SH_(\w+)_(\d+)_term(\d)$/) || key.match(/^SH_(\w+)_(\d+)_sem(\d)$/);
     if (parts) {
-        var strand = parts[1], grade = parseInt(parts[2]), sem = 'sem' + parts[3];
+        var strand = parts[1], grade = parseInt(parts[2]);
+        var termKey = 'term' + parts[3]; // works for both term1 and sem1->term1
         var sd = SUBJECT_CATALOG.SH[strand];
-        if (sd && sd[grade] && sd[grade][sem]) return sd[grade][sem].slice();
+        if (sd && sd[grade] && sd[grade][termKey]) return sd[grade][termKey].slice();
     }
     return [];
 }
@@ -439,7 +441,7 @@ function showSubjectScanPicker(subjects) {
         '<div><label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Grade</label>' +
         '<select id="scan-grade" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-primary bg-white"><option value="11">Grade 11</option><option value="12">Grade 12</option></select></div>' +
         '<div><label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Semester</label>' +
-        '<select id="scan-sem" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-primary bg-white"><option value="1">1st Semester</option><option value="2">2nd Semester</option></select></div>' +
+        '<select id="scan-sem" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold outline-none focus:border-primary bg-white"><option value="1">Term 1</option><option value="2">Term 2</option><option value="3">Term 3</option></select></div>' +
         '</div>' +
         '</div>' +
         '<div class="p-3 bg-gray-50 rounded-xl border border-gray-200 max-h-40 overflow-y-auto">' +
@@ -470,7 +472,7 @@ function applyScannedSubjectsList(subjects) {
         var strand = document.getElementById('scan-strand') ? document.getElementById('scan-strand').value : 'Academic';
         var grade = document.getElementById('scan-grade') ? document.getElementById('scan-grade').value : '11';
         var sem = document.getElementById('scan-sem') ? document.getElementById('scan-sem').value : '1';
-        key = 'SH_' + strand + '_' + grade + '_sem' + sem;
+        key = 'SH_' + strand + '_' + grade + '_term' + sem;
     }
     var existing = getCustomSubjectList(key);
     var toAdd = subjects.filter(function (s) { return !existing.includes(s); });

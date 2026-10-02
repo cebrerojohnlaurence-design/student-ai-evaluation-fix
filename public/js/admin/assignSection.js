@@ -108,7 +108,13 @@ function renderAssignSection(container) {
         
         if (currentUser.role === 'curriculum_coordinator') {
             if (currentUser.department === 'JHS') matchesFilter = gradeNum <= 10;
-            else if (currentUser.department === 'SHS') matchesFilter = gradeNum >= 11;
+            else if (currentUser.department === 'SHS') {
+                matchesFilter = gradeNum >= 11;
+                // Also filter by strand: TechPro coord sees TechPro sections, Academic sees Academic
+                if (matchesFilter && currentUser.strand && sec.strand) {
+                    matchesFilter = sec.strand === currentUser.strand;
+                }
+            }
         } else {
             if (_sectionFilter === 'JH') matchesFilter = gradeNum <= 10;
             if (_sectionFilter === 'SH') matchesFilter = gradeNum >= 11;
@@ -528,8 +534,19 @@ function printSectionMasterlist(sectionName) {
 function openAddSectionModal() {
     document.getElementById('add-section-modal').classList.remove('hidden');
     document.getElementById('new-sec-name').value = '';
-    document.getElementById('new-sec-year').value = '';
-    document.getElementById('new-sec-strand-wrap').classList.add('hidden');
+
+    const isSHSCoord = currentUser && currentUser.department === 'SHS';
+    if (isSHSCoord) {
+        // Auto-select Grade 11 for SHS coordinator and show strand field pre-filled
+        document.getElementById('new-sec-year').value = 'Grade 11';
+        document.getElementById('new-sec-strand-wrap').classList.remove('hidden');
+        if (currentUser.strand) {
+            document.getElementById('new-sec-strand').value = currentUser.strand;
+        }
+    } else {
+        document.getElementById('new-sec-year').value = '';
+        document.getElementById('new-sec-strand-wrap').classList.add('hidden');
+    }
     setTimeout(() => document.getElementById('new-sec-name').focus(), 50);
 }
 
@@ -541,6 +558,10 @@ function toggleSectionStrandField() {
     const year = document.getElementById('new-sec-year').value;
     const isSH = year === 'Grade 11' || year === 'Grade 12';
     document.getElementById('new-sec-strand-wrap').classList.toggle('hidden', !isSH);
+    // If SHS coord, always pre-select their strand
+    if (isSH && currentUser && currentUser.strand) {
+        document.getElementById('new-sec-strand').value = currentUser.strand;
+    }
 }
 
 function saveNewSection() {
@@ -678,30 +699,62 @@ function selectSection(id) {
 // ─── Student Assignment ───────────────────────────────────────────────────────
 function _buildAssignSearchResults(sec, search) {
     const searchVal = search.toLowerCase();
+    const isSHSCoord = currentUser && currentUser.department === 'SHS';
+    const coordStrand = currentUser && currentUser.strand; // 'TechPro' or 'Academic'
 
-    // Allow assigned students to be discovered to support re-assigning/moving them across scope. Unfilter except active housing duplicate.
-    const available = students.filter(s => s.section !== sec.name);
+    // Base pool: exclude students already IN this section
+    let pool = students.filter(s => s.section !== sec.name);
+
+    if (isSHSCoord) {
+        // Build a set of section names that belong to the coordinator's strand
+        const myStrandSectionNames = new Set(
+            _sections.filter(s => s.strand === coordStrand).map(s => s.name)
+        );
+        const otherStrandSectionNames = new Set(
+            _sections.filter(s => s.strand && s.strand !== coordStrand).map(s => s.name)
+        );
+
+        pool = pool.filter(s => {
+            const sec = s.section || '';
+            // Exclude students in the OTHER strand's sections
+            if (sec && otherStrandSectionNames.has(sec)) return false;
+            // Exclude clearly JHS (Grade 7-9) students
+            const jhsPatterns = ['grade 7','gr. 7','g7','7-','grade 8','gr. 8','g8','8-','grade 9','gr. 9','g9','9-'];
+            if (jhsPatterns.some(p => sec.toLowerCase().includes(p))) return false;
+            return true;
+        });
+    }
 
     const searchResults = searchVal.length >= 1
-        ? available.filter(s =>
+        ? pool.filter(s =>
             s.name.toLowerCase().includes(searchVal) ||
             String(s.lrn).includes(searchVal)
         ).slice(0, 8)
         : [];
 
+    const noMatchMsg = isSHSCoord
+        ? '<p class="text-xs text-gray-400 italic p-2">No matching SHS students found (Grade 10-12 only).</p>'
+        : '<p class="text-xs text-gray-400 italic p-2">No matching students found.</p>';
+
     return searchVal.length >= 1
         ? (searchResults.length === 0
-            ? '<p class="text-xs text-gray-400 italic p-2">No matching unassigned students found. (If a student is already in another section, remove them first).</p>'
+            ? noMatchMsg
             : '<div class="mt-1 border border-gray-200 rounded-xl overflow-hidden shadow-sm">' +
-            searchResults.map(s =>
-                '<button onclick="assignStudentToSection(\'' + s.lrn + '\')" class="w-full flex items-center justify-between px-4 py-2.5 hover:bg-green-50 transition text-left border-b border-gray-100 last:border-b-0">' +
-                '<div>' +
-                '<p class="text-sm font-bold text-gray-800">' + s.name + '</p>' +
-                '<p class="text-[10px] font-mono text-gray-400">LRN: ' + s.lrn + '</p>' +
-                '</div>' +
-                '<span class="text-xs text-primary font-bold flex items-center gap-1"><i class="fas fa-user-plus"></i> Assign</span>' +
-                '</button>'
-            ).join('') +
+            searchResults.map(s => {
+                const inOtherSection = s.section && s.section !== sec.name;
+                const sectionBadge = inOtherSection
+                    ? '<span class="text-[9px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200 font-bold ml-1">' + s.section + '</span>'
+                    : '<span class="text-[9px] px-2 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200 font-bold ml-1">Unassigned</span>';
+                return '<button onclick="assignStudentToSection(\'' + s.lrn + '\')" class="w-full flex items-center justify-between px-4 py-2.5 hover:bg-green-50 transition text-left border-b border-gray-100 last:border-b-0">' +
+                    '<div class="min-w-0">' +
+                    '<div class="flex items-center gap-1 flex-wrap">' +
+                    '<p class="text-sm font-bold text-gray-800">' + s.name + '</p>' + sectionBadge +
+                    '</div>' +
+                    '<p class="text-[10px] font-mono text-gray-400">LRN: ' + s.lrn + '</p>' +
+                    '</div>' +
+                    '<span class="text-xs text-primary font-bold flex items-center gap-1 shrink-0"><i class="fas fa-user-plus"></i> Assign</span>' +
+                    '</button>';
+            }).join('') +
             '</div>')
         : '';
 }
@@ -719,15 +772,21 @@ async function assignStudentToSection(lrn) {
     const student = students.find(s => String(s.lrn) === String(lrn));
     if (!student) return;
 
-    // Promotion / Re-Assignment check: Reassign if already housed
+    // If student is already in another section → show styled confirmation modal (NOT native browser alert)
     if (student.section && student.section !== _selectedSection.name) {
-        if (!confirm('Student is currently assigned to ' + student.section + '. Do you want to enroll/promote them to ' + _selectedSection.name + ' for ' + _schoolYearFilter + '?')) {
-            return;
-        }
+        openConfirmModal(
+            '⚠️ Student Already Assigned',
+            student.name + ' is currently in <strong>' + student.section + '</strong>.<br>Move them to <strong>' + _selectedSection.name + '</strong> for S.Y. ' + _schoolYearFilter + '?',
+            async () => { await _doAssignStudent(student); }
+        );
+        return;
     }
+    await _doAssignStudent(student);
+}
 
+async function _doAssignStudent(student) {
     try {
-        const res = await fetch('/api/students/' + (student.id || lrn), {
+        const res = await fetch('/api/students/' + (student.id || student.lrn), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({ section: _selectedSection.name, school_year: _schoolYearFilter })

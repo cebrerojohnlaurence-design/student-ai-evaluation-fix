@@ -255,11 +255,11 @@ function refreshTeacherSubjectCheckboxes(preChecked) {
         }
         dynamicJH.forEach(sub => { if (!seen.has(sub)) { seen.add(sub); subjects.push(sub); } });
     } else {
-        // Combine all grades+sems for the strand (unique)
+        // Combine all grades + terms for the strand (unique) — Trimester system
         const sd = SUBJECT_CATALOG.SH[strand];
         if (sd) {
             [11, 12].forEach(g => {
-                ['sem1', 'sem2'].forEach(s => {
+                ['term1', 'term2', 'term3'].forEach(s => {
                     if (sd[g] && sd[g][s]) {
                         sd[g][s].forEach(sub => { if (!seen.has(sub)) { seen.add(sub); subjects.push(sub); } });
                     }

@@ -144,7 +144,40 @@ function renderRecords(container) {
             });
         }
 
-        currentUser.handledSections = [...teacherSections].sort();
+        let finalSections = [...teacherSections].filter(Boolean);
+        
+        // Filter sections based on teacher's level and strand to avoid showing opposite level's sections
+        if (currentUser.level === 'SH') {
+            const myStrand = currentUser.strand; 
+            let allSecs = [];
+            try { allSecs = JSON.parse(localStorage.getItem('cnhs_sections') || '[]'); } catch(e){}
+            
+            finalSections = finalSections.filter(secName => {
+                const secLow = secName.toLowerCase();
+                // Hide JHS sections from SHS teacher
+                const isJHS = ['grade 7','gr. 7','g7','7-','grade 8','gr. 8','g8','8-','grade 9','gr. 9','g9','9-'].some(p => secLow.includes(p));
+                if (isJHS) return false;
+                
+                // If teacher belongs to a specific strand, hide sections belonging to the other strand
+                if (myStrand) {
+                    const secObj = allSecs.find(s => s.name === secName);
+                    if (secObj && secObj.strand && secObj.strand !== myStrand) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+        } else if (currentUser.level === 'JH') {
+            finalSections = finalSections.filter(secName => {
+                const secLow = secName.toLowerCase();
+                // Hide SHS sections from JHS teacher
+                const isSHS = ['grade 11','gr. 11','11-','grade 12','gr. 12','12-'].some(p => secLow.includes(p));
+                if (isSHS) return false;
+                return true;
+            });
+        }
+
+        currentUser.handledSections = finalSections.sort();
 
         if (currentSubjectView) {
             renderDetailedSubjectView(container, currentSubjectView);
@@ -2223,7 +2256,7 @@ function renderDetailedSubjectView(container, subject) {
                             </th>
                             <th colspan="3" class="bg-purple-50 text-purple-800 border-b border-purple-200 static-cell">
                                 <div class="flex items-center justify-center gap-2">
-                                    <span class="cursor-pointer hover:underline tooltip-trigger flex items-center gap-1" title="Edit Grading Weights" onclick="openGradingWeightsModal('${subject}')">Assessment (${qaWeight}%) <i class="fas fa-edit text-[10px]"></i></span>
+                                    <span class="cursor-pointer hover:underline tooltip-trigger flex items-center gap-1" title="Edit Grading Weights" onclick="openGradingWeightsModal('${subject}')">${isSHS ? 'Examination - EX' : 'Assessment'} (${qaWeight}%) <i class="fas fa-edit text-[10px]"></i></span>
                                 </div>
                             </th>
                             <th rowspan="2" class="bg-gray-200 static-cell border-l-2 border-gray-300 w-16">Initial Grade</th>

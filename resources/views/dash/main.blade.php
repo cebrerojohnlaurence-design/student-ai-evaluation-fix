@@ -588,7 +588,7 @@
 
     {{-- Load all admin render functions (shared even for teacher role via role checks) --}}
     <script src="{{ asset('js/admin/dashboard.js') }}"></script>
-    <script src="{{ asset('js/admin/enrollment.js') }}"></script>
+
     <script src="{{ asset('js/admin/addstudents.js') }}"></script>
     <script src="{{ asset('js/admin/records.js') }}"></script>
     <script src="{{ asset('js/admin/manageTeachers.js') }}"></script>
@@ -654,7 +654,7 @@
                 document.getElementById("nav-manage-teachers")?.classList.remove("hidden");
                 document.getElementById("nav-subjects")?.classList.remove("hidden");
                 document.getElementById("nav-assign-section")?.classList.remove("hidden");
-                if (session.department === 'SHS') document.getElementById("nav-enrollment")?.classList.remove("hidden");
+
                 document.getElementById("nav-logs")?.classList.remove("hidden");
                 document.getElementById("nav-maintenance")?.classList.remove("hidden");
             } else if (session.role === "admin") {
@@ -662,7 +662,7 @@
                 document.getElementById("nav-manage-teachers")?.classList.remove("hidden");
                 document.getElementById("nav-subjects")?.classList.remove("hidden");
                 document.getElementById("nav-assign-section")?.classList.remove("hidden");
-                if (session.department === 'SHS') document.getElementById("nav-enrollment")?.classList.remove("hidden");
+
                 document.getElementById("nav-logs")?.classList.remove("hidden");
                 document.getElementById("nav-maintenance")?.classList.remove("hidden");
             } else if (session.role === "teacher") {
