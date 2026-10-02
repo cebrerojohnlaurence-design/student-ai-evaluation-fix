@@ -1034,7 +1034,7 @@ async function processAI() {
         for (let i = 1; i <= MAX_PT; i++) ptFormat.push('pt' + i);
 
         let formatStr = `{name: 'Student Name', ${wwFormat.map(k => `${k}: number`).join(', ')}, ${ptFormat.map(k => `${k}: number`).join(', ')}, qa: number}`;
-        let termStr = isSHS ? "using the 3-Term (Trimester) format" : "using the 4-Quarter format";
+        let termStr = "using the 3-Term (Trimester) format";
         prompt = `Extract student names and their ${currentSubjectView} breakdown scores ${termStr}: Quiz 1-${MAX_WW} (${wwFormat.join(', ')}), Task 1-${MAX_PT} (${ptFormat.join(', ')}), Exam (qa). IMPORTANT: Also extract the row for maximum possible scores (often labeled 'Highest Possible Score') and include it in the array exactly like a student, but strictly name it 'HIGHEST POSSIBLE SCORE'. Format as JSON array: ${formatStr}`;
     } else if (currentMode === 'ATTENDANCE') {
         prompt = `Extract student names and their daily attendance marks for 25 columns (5 weeks of Monday-Friday). Return "/" for present, "x" for absent, or "" if blank. Format as JSON array of objects: {name: 'Student Name', marks: ["/", "x", ...]} (exactly 25 strings in marks array). Look for a grid layout with M-T-W-T-F headers.`;
@@ -1057,12 +1057,12 @@ async function processAI() {
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
             let targetSheetName = workbook.SheetNames[0];
+            const targetQuarter = window.currentRecordQuarter || 1;
 
             // Only search for Quarter/Term sheets if we are extracting grades
             if (currentMode !== 'STUDENT_LIST') {
-                const targetQuarter = window.currentRecordQuarter || 1;
-                const qStr1 = isSHS ? `T${targetQuarter}` : `Q${targetQuarter}`;
-                const qStr2 = isSHS ? `TERM ${targetQuarter}` : `QUARTER ${targetQuarter}`;
+                const qStr1 = `T${targetQuarter}`;
+                const qStr2 = `TERM ${targetQuarter}`;
                 for (let name of workbook.SheetNames) {
                     if (name.toUpperCase().includes(qStr1) || name.toUpperCase().includes(qStr2)) {
                         targetSheetName = name;
@@ -1078,7 +1078,7 @@ async function processAI() {
 
             let extraContext = "";
             if (currentMode === 'CLASS_RECORD') {
-                extraContext = ` You are extracting scores for ${isSHS ? 'Term' : 'Quarter'} ${targetQuarter}. Please carefully analyze the data and extract the scores according to the format instructions above.`;
+                extraContext = ` You are extracting scores for Term ${targetQuarter}. Please carefully analyze the data and extract the scores according to the format instructions above.`;
             } else {
                 extraContext = ` Please carefully analyze the data and extract the requested information according to the format instructions above.`;
             }
@@ -1661,7 +1661,7 @@ window.renderQuickGradesTable = function (sy) {
         let subjectsWithFinal = 0;
 
         const isSHS = yearLevelStr.includes('11') || yearLevelStr.includes('12') || window.studentsAnalyticsLevel === 'SH';
-        const maxTerms = isSHS ? 3 : 4;
+        const maxTerms = 3;
 
         // Iterate subjects exactly like a traditional transcript
         Object.keys(bySubject).forEach(subName => {
@@ -1685,9 +1685,7 @@ window.renderQuickGradesTable = function (sy) {
             const s1 = subs.find(s => (s.quarter || 1) == 1); q1 = updateQ(1, s1 ? (s1.grade || s1.g) : null);
             const s2 = subs.find(s => (s.quarter || 1) == 2); q2 = updateQ(2, s2 ? (s2.grade || s2.g) : null);
             const s3 = subs.find(s => (s.quarter || 1) == 3); q3 = updateQ(3, s3 ? (s3.grade || s3.g) : null);
-            if (!isSHS) {
-                const s4 = subs.find(s => (s.quarter || 1) == 4); q4 = updateQ(4, s4 ? (s4.grade || s4.g) : null);
-            }
+
 
             if (count === maxTerms) {
                 // Typical DepEd academic averaging uses round instead of formatting exactly 2 decimal places
@@ -1703,7 +1701,7 @@ window.renderQuickGradesTable = function (sy) {
                     <td class="border-r border-gray-300 px-2 py-3 text-center text-[13px] text-gray-900 font-bold">${q1 !== '-' ? q1 : ''}</td>
                     <td class="border-r border-gray-300 px-2 py-3 text-center text-[13px] text-gray-900 font-bold">${q2 !== '-' ? q2 : ''}</td>
                     <td class="border-r border-gray-300 px-2 py-3 text-center text-[13px] text-gray-900 font-bold">${q3 !== '-' ? q3 : ''}</td>
-                    ${!isSHS ? `<td class="border-r border-gray-300 px-2 py-3 text-center text-[13px] text-gray-900 font-bold">${q4 !== '-' ? q4 : ''}</td>` : ''}
+
                     <td class="border-r border-gray-300 px-2 py-3 text-center text-[14px] font-black text-primary bg-primary/5">${finalStr !== '-' ? finalStr : ''}</td>
                 </tr>
                 `;
@@ -1716,7 +1714,7 @@ window.renderQuickGradesTable = function (sy) {
             const gwaColor = gwa >= 75 ? 'text-green-700' : 'text-red-600';
             gwaHtml = `
                 <tr class="bg-gray-50/80">
-                    <td colspan="${isSHS ? 4 : 5}" class="border border-gray-300 px-4 py-4 text-xs font-black uppercase text-gray-800 tracking-wider text-left">General Average for the Academic Year</td>
+                    <td colspan="4" class="border border-gray-300 px-4 py-4 text-xs font-black uppercase text-gray-800 tracking-wider text-left">General Average for the Academic Year</td>
                     <td class="border border-gray-300 px-2 py-4 text-center text-lg font-black ${gwaColor} bg-gray-100">${gwa}</td>
                 </tr>
                 `;
@@ -1728,10 +1726,9 @@ window.renderQuickGradesTable = function (sy) {
                         <thead>
                             <tr class="bg-gray-50 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] leading-tight border-b border-gray-100">
                                 <th class="px-6 py-5 text-left font-black">Learning Areas</th>
-                                <th class="px-3 py-5 text-center w-[10%]">${isSHS ? 'T1' : 'Q1'}</th>
-                                <th class="px-3 py-5 text-center w-[10%]">${isSHS ? 'T2' : 'Q2'}</th>
-                                <th class="px-3 py-5 text-center w-[10%]">${isSHS ? 'T3' : 'Q3'}</th>
-                                ${!isSHS ? `<th class="px-3 py-5 text-center w-[10%]">Q4</th>` : ''}
+                                <th class="px-3 py-5 text-center w-[10%]">Term 1</th>
+                                <th class="px-3 py-5 text-center w-[10%]">Term 2</th>
+                                <th class="px-3 py-5 text-center w-[10%]">Term 3</th>
                                 <th class="px-3 py-5 text-center w-[15%] bg-blue-50/50 text-blue-900">Final</th>
                             </tr>
                         </thead>

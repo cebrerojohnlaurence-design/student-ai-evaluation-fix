@@ -688,7 +688,7 @@ function renderAdviserSectionStudents(container) {
                     <!-- Right side top bar -->
                     <div class="flex gap-2 items-center flex-wrap">
                         <select onchange="setRecordQuarter(this.value)" class="px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] outline-none focus:border-primary transition font-bold text-gray-700 bg-white shadow-sm h-[34px]">
-                            <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>${isSHS ? 'All Terms' : 'All Quarters'}</option>
+                            <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>All Terms</option>
                             ${(function () {
             let gpList = ['1', '2', '3', '4'];
             if (typeof globalSettings !== 'undefined' && globalSettings['grading_periods']) {
@@ -698,12 +698,12 @@ function renderAdviserSectionStudents(container) {
                 } catch (e) { }
             }
             return gpList.map(gp => {
-                let label = isSHS ? 'Term ' + gp : gp + (gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th') + ' Quarter';
+                let label = 'Term ' + gp;
                 return `<option value="${gp}" ${window.currentRecordQuarter == gp ? 'selected' : ''}>${label}</option>`;
             }).join('');
         })()}
                         </select>
-                        ${!isSHS ? `
+                        ${false ? `
                         <div class="flex items-center bg-white border border-gray-200 rounded-lg p-0.5 h-[34px]">
                             <button onclick="setRecordSemester(1)" class="px-3 py-1 rounded-md text-[10px] font-bold uppercase transition ${window.currentRecordSemester === 1 ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}">1st Sem</button>
                             <button onclick="setRecordSemester(2)" class="px-3 py-1 rounded-md text-[10px] font-bold uppercase transition ${window.currentRecordSemester === 2 ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}">2nd Sem</button>
@@ -1582,7 +1582,7 @@ function renderAdminSectionStudents(container) {
                     </div>
                     <div class="flex gap-2 items-center flex-wrap">
                         <select onchange="setRecordQuarter(this.value)" class="px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] outline-none focus:border-primary transition font-bold text-gray-700 bg-white shadow-sm h-[34px]">
-                            <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>${isSHS ? 'All Terms' : 'All Quarters'}</option>
+                            <option value="ALL" ${window.currentRecordQuarter === 'ALL' || !window.currentRecordQuarter ? 'selected' : ''}>All Terms</option>
                             ${(function () {
             let gpList = ['1', '2', '3', '4'];
             if (typeof globalSettings !== 'undefined' && globalSettings['grading_periods']) {
@@ -1592,7 +1592,7 @@ function renderAdminSectionStudents(container) {
                 } catch (e) { }
             }
             return gpList.map(gp => {
-                let label = isSHS ? 'Term ' + gp : gp + (gp == 1 ? 'st' : gp == 2 ? 'nd' : gp == 3 ? 'rd' : 'th') + ' Quarter';
+                let label = 'Term ' + gp;
                 return `<option value="${gp}" ${window.currentRecordQuarter == gp ? 'selected' : ''}>${label}</option>`;
             }).join('');
         })()}
@@ -2136,7 +2136,7 @@ function renderDetailedSubjectView(container, subject) {
         </div>
             `).join('');
 
-    let isSHS = false;
+    let isSHS = true;
 
     // Check if the currently pinned sections indicate SHS
     if (visiblePinnedSections.length > 0) {
@@ -2256,11 +2256,11 @@ function renderDetailedSubjectView(container, subject) {
                             </th>
                             <th colspan="3" class="bg-purple-50 text-purple-800 border-b border-purple-200 static-cell">
                                 <div class="flex items-center justify-center gap-2">
-                                    <span class="cursor-pointer hover:underline tooltip-trigger flex items-center gap-1" title="Edit Grading Weights" onclick="openGradingWeightsModal('${subject}')">${isSHS ? 'Examination - EX' : 'Assessment'} (${qaWeight}%) <i class="fas fa-edit text-[10px]"></i></span>
+                                    <span class="cursor-pointer hover:underline tooltip-trigger flex items-center gap-1" title="Edit Grading Weights" onclick="openGradingWeightsModal('${subject}')">Examination - EX (${qaWeight}%) <i class="fas fa-edit text-[10px]"></i></span>
                                 </div>
                             </th>
                             <th rowspan="2" class="bg-gray-200 static-cell border-l-2 border-gray-300 w-16">Initial Grade</th>
-                            <th rowspan="2" class="bg-gray-300 static-cell border-l-2 border-gray-400 w-16 text-xs shadow-sm">${isSHS ? 'Term Grade' : 'Quarterly Grade'}</th>
+                            <th rowspan="2" class="bg-gray-300 static-cell border-l-2 border-gray-400 w-16 text-xs shadow-sm">Term Grade</th>
                         </tr>
                         <tr>
                             ${wwHeaders}

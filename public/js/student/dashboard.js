@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Quick SHS check
         const secName = (window.studentData.section || '').toLowerCase();
         const isSHS = secName.includes('11') || secName.includes('12') || window.studentsAnalyticsLevel === 'SH';
-        const maxQ = isSHS ? 3 : 4;
+        const maxQ = 3;
 
         for (let q = 1; q <= maxQ; q++) {
             const qSubjects = window.studentData.subjects.filter(s => parseInt(s.quarter) === q && s.g);
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (secLower.match(/\b7\b/) || secLower.startsWith('7')) gradeLevel = 7;
 
         const isSHS = gradeLevel === 11 || gradeLevel === 12 || window.studentsAnalyticsLevel === 'SH';
-        const maxTerms = isSHS ? 3 : 4;
+        const maxTerms = 3;
 
         // Auto-inject standard curriculum subjects for JHS
         if ((gradeLevel >= 7 && gradeLevel <= 10) || (!isSHS)) {
@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (sub.q1) { finalAvg += sub.q1; qCount++; }
                 if (sub.q2) { finalAvg += sub.q2; qCount++; }
                 if (sub.q3) { finalAvg += sub.q3; qCount++; }
-                if (!isSHS && sub.q4) { finalAvg += sub.q4; qCount++; }
+
 
                 let finalGradeHtml = '--';
                 let remarksHtml = '--';
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-bold text-gray-600">${q1Html}</td>
                 <td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-bold text-gray-600">${q2Html}</td>
                 <td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-bold text-gray-600">${q3Html}</td>
-                ${!isSHS ? `<td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-bold text-gray-600">${q4Html}</td>` : ''}
+
                 <td class="py-4 px-4 border-r border-gray-50 text-center text-sm font-black text-gray-800 bg-gray-50/50">${finalGradeHtml}</td>
                 <td class="py-4 px-4 text-center">${remarksHtml}</td>
             `;
@@ -276,10 +276,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const theadHtml = `
             <tr>
                 <th class="py-4 px-6 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50">Learning Area</th>
-                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">${isSHS ? 'Term 1' : 'Q1'}</th>
-                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">${isSHS ? 'Term 2' : 'Q2'}</th>
-                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">${isSHS ? 'Term 3' : 'Q3'}</th>
-                ${!isSHS ? `<th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">Q4</th>` : ''}
+                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">Term 1</th>
+                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">Term 2</th>
+                <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest border-r border-gray-50 w-24">Term 3</th>
                 <th class="py-4 px-4 text-center text-[10px] font-black text-primary uppercase tracking-widest border-r border-gray-50 w-24 bg-primary/5">Final</th>
                 <th class="py-4 px-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest w-24">Remarks</th>
             </tr>
@@ -288,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (headEl) headEl.innerHTML = theadHtml;
 
             const subtitle = document.getElementById('grades-subtitle');
-            if (subtitle) subtitle.innerText = isSHS ? 'Term Grade Breakdown' : 'Quarterly Grade Breakdown';
+            if (subtitle) subtitle.innerText = 'Term Grade Breakdown';
 
             tfoot.classList.remove('hidden');
 
