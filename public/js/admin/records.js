@@ -2268,8 +2268,7 @@ function renderDetailedSubjectView(container, subject) {
         }
     }
 
-    const quarterBtnsHtml = isSHS
-        ? [1, 2, 3].map(q => `
+    const quarterBtnsHtml = [1, 2, 3].map(q => `
             <button onclick="setRecordQuarter(${q})"
                 class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
                                ${(window.currentRecordQuarter || 1) === q
@@ -2277,17 +2276,7 @@ function renderDetailedSubjectView(container, subject) {
                 : 'text-white/80 hover:bg-white/20 hover:text-white'
             }">
                 Term ${q}
-            </button>`).join('')
-        : [1, 2, 3, 4].map(q => `
-            <button onclick = "setRecordQuarter(${q})"
-        class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
-                       ${(window.currentRecordQuarter || 1) === q
-                ? 'bg-white text-primary shadow-sm'
-                : 'text-white/80 hover:bg-white/20 hover:text-white'
-            } ">
-            Q${q}
-        </button>
-            `).join('');
+            </button>`).join('');
 
     const weights = getSubjectWeights(subject, { section: visiblePinnedSections[0] || '' });
     const wwWeight = (weights.ww * 100).toFixed(0);

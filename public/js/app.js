@@ -1927,10 +1927,11 @@ async function showReport(s) {
 
             <div>
                 <label id="report-grading-label" class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TERM</label>
-                <div class="grid grid-cols-3 gap-2">
+                <div class="grid grid-cols-4 gap-2">
                    <button type="button" id="sembtn-1" onclick="selectSemester(1)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-primary bg-primary text-white">Term 1</button>
                    <button type="button" id="sembtn-2" onclick="selectSemester(2)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">Term 2</button>
                    <button type="button" id="sembtn-3" onclick="selectSemester(3)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">Term 3</button>
+                   <button type="button" id="sembtn-0" onclick="selectSemester(0)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">View All</button>
                 </div>
             </div>
 
@@ -1967,7 +1968,7 @@ async function showReport(s) {
 
 
 function selectSemester(sem) {
-    [1, 2, 3].forEach(i => {
+    [0, 1, 2, 3].forEach(i => {
         const btn = document.getElementById(`sembtn-${i}`);
         if (!btn) return;
         if (i === sem) {
@@ -2069,15 +2070,10 @@ async function loadAcademicReport() {
 
     let qs = [];
     let semLabel = '';
-    if (isSH) {
-        if (semester === 1) { qs = [1]; semLabel = 'TERM 1'; }
-        else if (semester === 2) { qs = [2]; semLabel = 'TERM 2'; }
-        else if (semester === 3) { qs = [3]; semLabel = 'TERM 3'; }
-    } else {
-        if (semester === 1) { qs = [1, 2]; semLabel = 'FIRST SEMESTER (Q1 & Q2)'; }
-        else if (semester === 2) { qs = [3, 4]; semLabel = 'SECOND SEMESTER (Q3 & Q4)'; }
-        else { qs = [1, 2, 3, 4]; semLabel = 'FULL ACADEMIC YEAR'; }
-    }
+    if (semester === 1) { qs = [1]; semLabel = 'TERM 1'; }
+    else if (semester === 2) { qs = [2]; semLabel = 'TERM 2'; }
+    else if (semester === 3) { qs = [3]; semLabel = 'TERM 3'; }
+    else { qs = [1, 2, 3]; semLabel = 'ALL TERMS'; }
 
     let qData = { 1: [], 2: [], 3: [], 4: [] };
     try {
@@ -2224,7 +2220,7 @@ async function loadAcademicReport() {
         `;
     }).join('');
 
-    const headers = qs.map(q => `<th class="border border-gray-400 py-2 px-2 text-center leading-tight">Q${q}</th>`).join('');
+    const headers = qs.map(q => `<th class="border border-gray-400 py-2 px-2 text-center leading-tight">Term ${q}</th>`).join('');
 
     area.innerHTML = `
         <div id="printable-report" class="font-sans text-gray-800">
