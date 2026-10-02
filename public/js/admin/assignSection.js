@@ -106,16 +106,20 @@ function renderAssignSection(container) {
         const gradeNum = parseInt((sec.year || '').replace(/\D/g, '')) || 0;
         let matchesFilter = true;
         
-        if (currentUser.role === 'curriculum_coordinator') {
-            if (currentUser.department === 'JHS') matchesFilter = gradeNum <= 10;
-            else if (currentUser.department === 'SHS') {
+        if (currentUser.role === 'curriculum_coordinator' || currentUser.role === 'teacher') {
+            const isSHSUser = currentUser.department === 'SHS' || currentUser.level === 'SH' || currentUser.strand;
+            const isJHSUser = currentUser.department === 'JHS' || currentUser.level === 'JH';
+            
+            if (isJHSUser && !isSHSUser) matchesFilter = gradeNum <= 10;
+            else if (isSHSUser) {
                 matchesFilter = gradeNum >= 11;
-                // Also filter by strand: TechPro coord sees TechPro sections, Academic sees Academic
-                if (matchesFilter && currentUser.strand && sec.strand) {
-                    matchesFilter = sec.strand === currentUser.strand;
+                if (matchesFilter && currentUser.strand && sec.strand && sec.strand !== currentUser.strand) {
+                    matchesFilter = false;
                 }
             }
-        } else {
+        }
+        
+        if (matchesFilter && currentUser.role !== 'curriculum_coordinator' && currentUser.role !== 'teacher') {
             if (_sectionFilter === 'JH') matchesFilter = gradeNum <= 10;
             if (_sectionFilter === 'SH') matchesFilter = gradeNum >= 11;
         }
@@ -129,9 +133,12 @@ function renderAssignSection(container) {
 
     let availableGrades = [...new Set(_sections.filter(s => {
         const gradeNum = parseInt((s.year || '').replace(/\D/g, '')) || 0;
-        if (currentUser.role === 'curriculum_coordinator') {
-            if (currentUser.department === 'JHS') return gradeNum <= 10;
-            else if (currentUser.department === 'SHS') return gradeNum >= 11;
+        if (currentUser.role === 'curriculum_coordinator' || currentUser.role === 'teacher') {
+            const isSHSUser = currentUser.department === 'SHS' || currentUser.level === 'SH' || currentUser.strand;
+            const isJHSUser = currentUser.department === 'JHS' || currentUser.level === 'JH';
+            
+            if (isJHSUser && !isSHSUser) return gradeNum <= 10;
+            else if (isSHSUser) return gradeNum >= 11;
         }
         return true;
     }).map(s => s.year))].filter(Boolean).sort((a,b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
