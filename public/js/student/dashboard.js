@@ -678,18 +678,35 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.openAttendanceModal = function() {
-        if (!window.studentData || !window.studentData.attendance_months) {
-            Swal.fire({
-                icon: 'info',
-                title: 'No Data',
-                text: 'Attendance data has not been encoded yet.'
-            });
+        const att = window.studentData && window.studentData.attendance_months;
+        const overallPct = window.studentData && parseFloat(window.studentData.attendance);
+
+        // No monthly data at all — show overall % if available, else "No Data"
+        if (!att) {
+            if (overallPct > 0) {
+                Swal.fire({
+                    title: '<span class="text-blue-800 font-black">Attendance Record</span>',
+                    html: `
+                        <div class="text-center py-4">
+                            <div class="text-5xl font-black text-blue-700 mb-2">${overallPct.toFixed(2)}%</div>
+                            <p class="text-sm text-gray-500">Overall Present Days Rate</p>
+                            <p class="text-xs text-gray-400 mt-3 italic">Monthly breakdown has not been encoded yet.</p>
+                        </div>`,
+                    confirmButtonText: 'Close',
+                    confirmButtonColor: '#3B82F6'
+                });
+            } else {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'No Data',
+                    text: 'Attendance data has not been encoded yet.'
+                });
+            }
             return;
         }
 
         let html = '<div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-blue-50 text-blue-800 uppercase text-[10px] font-bold"><tr><th class="px-3 py-2 border">Month</th><th class="px-3 py-2 border text-center">School Days</th><th class="px-3 py-2 border text-center">Present</th><th class="px-3 py-2 border text-center">Absent</th></tr></thead><tbody>';
         
-        let att = window.studentData.attendance_months;
         let months = ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
         let tDays = 0, tPres = 0, tAbs = 0;
         
@@ -707,7 +724,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         if (tDays === 0) {
-            html = '<p class="text-gray-500 text-sm">No monthly attendance encoded yet.</p>';
+            // Monthly object exists but all zeros — show overall if available
+            if (overallPct > 0) {
+                html = `
+                    <div class="text-center py-4">
+                        <div class="text-5xl font-black text-blue-700 mb-2">${overallPct.toFixed(2)}%</div>
+                        <p class="text-sm text-gray-500">Overall Present Days Rate</p>
+                        <p class="text-xs text-gray-400 mt-3 italic">Monthly breakdown has not been encoded yet.</p>
+                    </div>`;
+            } else {
+                html = '<p class="text-gray-500 text-sm">No monthly attendance encoded yet.</p>';
+            }
         } else {
             html += `<tr class="bg-gray-100 font-bold"><td class="px-3 py-2 border">TOTAL</td><td class="px-3 py-2 border text-center">${tDays}</td><td class="px-3 py-2 border text-center text-green-600">${tPres}</td><td class="px-3 py-2 border text-center text-red-600">${tAbs}</td></tr>`;
             html += '</tbody></table></div>';
