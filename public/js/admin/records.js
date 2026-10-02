@@ -147,15 +147,24 @@ function renderRecords(container) {
         let finalSections = [...teacherSections].filter(Boolean);
         
         // Filter sections based on teacher's level and strand to avoid showing opposite level's sections
+        let allSecs = [];
+        try { allSecs = JSON.parse(localStorage.getItem('cnhs_sections') || '[]'); } catch(e){}
+
         if (currentUser.level === 'SH') {
             const myStrand = currentUser.strand; 
-            let allSecs = [];
-            try { allSecs = JSON.parse(localStorage.getItem('cnhs_sections') || '[]'); } catch(e){}
-            
             finalSections = finalSections.filter(secName => {
-                const match = secName.match(/\b([7-9]|1[0-2])\b/);
+                let match = secName.match(/\b([7-9]|1[0-2])\b/);
+                let gl = match ? parseInt(match[1]) : null;
+                if (!gl) {
+                    const sd = allSecs.find(x => x.name === secName);
+                    if (sd && sd.year) {
+                        let m2 = sd.year.match(/\b([7-9]|1[0-2])\b/);
+                        if (m2) gl = parseInt(m2[1]);
+                    }
+                }
+                
                 // Hide JHS sections from SHS teacher
-                if (match && parseInt(match[1]) <= 10) return false;
+                if (gl && gl <= 10) return false;
                 
                 // If teacher belongs to a specific strand, strictly require the section to match
                 if (myStrand) {
@@ -168,9 +177,19 @@ function renderRecords(container) {
             });
         } else if (currentUser.level === 'JH') {
             finalSections = finalSections.filter(secName => {
-                const match = secName.match(/\b([7-9]|1[0-2])\b/);
+                let match = secName.match(/\b([7-9]|1[0-2])\b/);
+                let gl = match ? parseInt(match[1]) : null;
+                if (!gl) {
+                    const sd = allSecs.find(x => x.name === secName);
+                    if (sd && sd.year) {
+                        let m2 = sd.year.match(/\b([7-9]|1[0-2])\b/);
+                        if (m2) gl = parseInt(m2[1]);
+                    }
+                }
+                
                 // Hide SHS sections from JHS teacher
-                if (match && parseInt(match[1]) >= 11) return false;
+                if (gl && gl >= 11) return false;
+                
                 return true;
             });
         }
