@@ -433,18 +433,12 @@ async function initAppData() {
             const subjects = (currentUser.subject || '').split(',').map(s => s.trim()).filter(Boolean);
             const teacherSections = new Set(adviserSections);
 
-            const pinned = JSON.parse(localStorage.getItem('cnhs_pinned_sections_' + currentUser.id)) || [];
+            const pinnedStr = localStorage.getItem('pinned_sections_' + currentUser.id + ' ');
+            const pinned = pinnedStr ? JSON.parse(pinnedStr) : [];
             pinned.forEach(sec => {
                 if (sec !== 'all') teacherSections.add(sec);
             });
 
-            if (subjects.length > 0) {
-                students.forEach(s => {
-                    if (s.subjects && s.subjects.some(sub => subjects.includes(sub.n))) {
-                        teacherSections.add(s.section);
-                    }
-                });
-            }
             currentUser.handledSections = [...teacherSections].sort();
         }
     } catch (e) {

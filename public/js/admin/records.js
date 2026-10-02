@@ -1848,6 +1848,29 @@ function renderMasterRecordsView(container) {
         ...visiblePinnedSections
     ])).filter(s => s !== 'all');
 
+    // Teacher with NO sections assigned and NO pinned sections → show empty state
+    if (currentUser.role === 'teacher' && availableForSelect.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-[60vh] gap-6 animate-fade-in">
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 max-w-md w-full text-center">
+                    <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-5">
+                        <i class="fas fa-clipboard-list text-primary text-3xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-2">No Sections Yet</h2>
+                    <p class="text-sm text-gray-500 mb-6">
+                        You have not been assigned to any section yet.<br>
+                        Click the button below to add your section and start encoding grades.
+                    </p>
+                    <button onclick="promptAddViewSection()"
+                        class="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primaryDark transition shadow">
+                        <i class="fas fa-plus mr-2"></i>Add My Section
+                    </button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
     let dropdownOptions = '';
     if (currentUser.role === 'admin' || currentUser.role === 'curriculum_coordinator') {
         dropdownOptions += `<option value="all" ${currentRecordSection === 'all' ? 'selected' : ''}>All Sections</option>`;

@@ -50,6 +50,7 @@ function getBaseDashboardStudents() {
 
     if (currentUser.role === 'teacher') {
         const handled = currentUser.handledSections || [];
+        if (handled.length === 0) return [];
         curr = curr.filter(s => handled.includes(s.section));
     } else if (currentUser.role === 'curriculum_coordinator') {
         if (currentUser.department === 'JHS') {
@@ -371,6 +372,32 @@ function renderDashboard(area) {
 
     if (currentUser.role === 'teacher') {
         const handled = currentUser.handledSections || [];
+
+        // If teacher has NO assigned or pinned sections yet, show an empty-state prompt
+        if (handled.length === 0) {
+            area.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-[60vh] gap-6 animate-fade-in">
+                    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 max-w-md w-full text-center">
+                        <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-5">
+                            <i class="fas fa-chalkboard-teacher text-primary text-3xl"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-800 mb-2">No Sections Assigned</h2>
+                        <p class="text-sm text-gray-500 mb-6">
+                            You have not been assigned to any section yet.
+                            Please contact your administrator or go to
+                            <strong>Grading Records</strong> and use the
+                            <strong>+ button</strong> to add your section.
+                        </p>
+                        <button onclick="navigate('records')"
+                            class="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primaryDark transition shadow">
+                            <i class="fas fa-plus mr-2"></i>Go to Grading Records
+                        </button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
         curr = curr.filter(s => handled.includes(s.section));
         handled.forEach(sec => {
             if (sec) {
@@ -382,10 +409,7 @@ function renderDashboard(area) {
                 }
             }
         });
-        if (!dashHasJHS && !dashHasSHS) {
-            // fallback if teacher has no sections
-            dashHasJHS = true;
-        }
+        if (!dashHasJHS && !dashHasSHS) dashHasJHS = true;
     } else if (currentUser.role === 'curriculum_coordinator') {
         if (currentUser.department === 'JHS') {
             // jhs curriculum coordinator dashboard
