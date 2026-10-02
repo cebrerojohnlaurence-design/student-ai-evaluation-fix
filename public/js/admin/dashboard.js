@@ -54,22 +54,32 @@ function getBaseDashboardStudents() {
     } else if (currentUser.role === 'curriculum_coordinator') {
         if (currentUser.department === 'JHS') {
             curr = curr.filter(s => {
-                if (!s.section) return true; // Show unassigned
+                if (!s.section) return !s.strand; // Show unassigned only if they don't have an SHS strand
+
+                // 1. Direct Regex Match on Section Name
                 const match = s.section.match(/\b([7-9]|1[0-2])\b/);
-                if (match && parseInt(match[1]) <= 10) return true;
-                if (typeof teachers !== 'undefined') {
-                    const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s.section.toLowerCase()));
-                    if (adv && adv.level === 'JH') return true;
+                if (match) {
+                    return parseInt(match[1]) <= 10;
                 }
-                // Check localStorage sections for grade level
+
+                // 2. LocalStorage Registration Match
                 try {
                     const savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
                     const secData = savedSections.find(x => x.name === s.section);
                     if (secData && secData.year) {
                         const m = secData.year.match(/\b([7-9]|1[0-2])\b/);
-                        if (m && parseInt(m[1]) <= 10) return true;
+                        if (m) {
+                            return parseInt(m[1]) <= 10;
+                        }
                     }
                 } catch (e) { }
+
+                // 3. Fallback to Teacher Adviser Check
+                if (typeof teachers !== 'undefined') {
+                    const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s.section.toLowerCase()));
+                    if (adv && adv.level === 'JH') return true;
+                }
+                
                 return false;
             });
         } else if (currentUser.department === 'SHS') {
@@ -87,22 +97,38 @@ function getBaseDashboardStudents() {
                         else isSHSStudent = true; // generic SHS coordinator
                     }
                 } else {
+                    // 1. Direct Regex Match
                     const match = s.section.match(/\b([7-9]|1[0-2])\b/);
-                    if (match && parseInt(match[1]) >= 11) isSHSStudent = true;
-                    if (!isSHSStudent && typeof teachers !== 'undefined') {
-                        const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s.section.toLowerCase()));
-                        if (adv && adv.level === 'SH') isSHSStudent = true;
+                    if (match) {
+                        if (parseInt(match[1]) >= 11) isSHSStudent = true;
+                        else return false; // Explicitly JHS
+                    } else {
+                        // 2. LocalStorage Registration Match
+                        let secData = null;
+                        try {
+                            const savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
+                            secData = savedSections.find(x => x.name === s.section);
+                            if (secData && secData.year) {
+                                const m = secData.year.match(/\b([7-9]|1[0-2])\b/);
+                                if (m) {
+                                    if (parseInt(m[1]) >= 11) isSHSStudent = true;
+                                    else return false; // Explicitly JHS
+                                }
+                            }
+                        } catch (e) { }
+
+                        // 3. Fallback to Teacher Adviser Check
+                        if (!isSHSStudent && typeof teachers !== 'undefined') {
+                            const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s.section.toLowerCase()));
+                            if (adv && adv.level === 'SH') isSHSStudent = true;
+                        }
                     }
-                    // Check localStorage sections
+
                     let secData = null;
                     try {
                         const savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
                         secData = savedSections.find(x => x.name === s.section);
-                        if (secData && secData.year) {
-                            const m = secData.year.match(/\b([7-9]|1[0-2])\b/);
-                            if (m && parseInt(m[1]) >= 11) isSHSStudent = true;
-                        }
-                    } catch (e) { }
+                    } catch (e) {}
 
                     if (currentUser.strand) {
                         if (s.strand && s.strand !== currentUser.strand) belongsToStrand = false;

@@ -153,15 +153,14 @@ function renderRecords(container) {
             try { allSecs = JSON.parse(localStorage.getItem('cnhs_sections') || '[]'); } catch(e){}
             
             finalSections = finalSections.filter(secName => {
-                const secLow = secName.toLowerCase();
+                const match = secName.match(/\b([7-9]|1[0-2])\b/);
                 // Hide JHS sections from SHS teacher
-                const isJHS = ['grade 7','gr. 7','g7','7-','grade 8','gr. 8','g8','8-','grade 9','gr. 9','g9','9-'].some(p => secLow.includes(p));
-                if (isJHS) return false;
+                if (match && parseInt(match[1]) <= 10) return false;
                 
-                // If teacher belongs to a specific strand, hide sections belonging to the other strand
+                // If teacher belongs to a specific strand, strictly require the section to match
                 if (myStrand) {
                     const secObj = allSecs.find(s => s.name === secName);
-                    if (secObj && secObj.strand && secObj.strand !== myStrand) {
+                    if (!secObj || secObj.strand !== myStrand) {
                         return false;
                     }
                 }
@@ -169,10 +168,9 @@ function renderRecords(container) {
             });
         } else if (currentUser.level === 'JH') {
             finalSections = finalSections.filter(secName => {
-                const secLow = secName.toLowerCase();
+                const match = secName.match(/\b([7-9]|1[0-2])\b/);
                 // Hide SHS sections from JHS teacher
-                const isSHS = ['grade 11','gr. 11','11-','grade 12','gr. 12','12-'].some(p => secLow.includes(p));
-                if (isSHS) return false;
+                if (match && parseInt(match[1]) >= 11) return false;
                 return true;
             });
         }
@@ -323,7 +321,7 @@ function promptAddAdviserSection() {
                 try {
                     let saved = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
                     let sd = saved.find(x => x.name === sec);
-                    if (sd && sd.strand && sd.strand !== myStrand) return false;
+                    if (!sd || sd.strand !== myStrand) return false;
                 } catch(e) {}
             }
             return true;
@@ -1768,7 +1766,27 @@ function renderMasterRecordsView(container) {
         const gNum = sObj.year.replace(/\D/g, '');
         return gNum ? `${gNum} - ${name}` : name;
     };
-    const yearSections = sectionsData.filter(s => !s.schoolYear || s.schoolYear === (window.currentRecordSchoolYear || '2025-2026')).map(s => s.name);
+    let yearSectionsData = sectionsData.filter(s => !s.schoolYear || s.schoolYear === (window.currentRecordSchoolYear || '2025-2026'));
+    
+    if (currentUser.role === 'curriculum_coordinator') {
+        if (currentUser.department === 'JHS') {
+            yearSectionsData = yearSectionsData.filter(s => {
+                const match = (s.year || s.name).match(/\b([7-9]|1[0-2])\b/);
+                return match && parseInt(match[1]) <= 10;
+            });
+        } else if (currentUser.department === 'SHS') {
+            yearSectionsData = yearSectionsData.filter(s => {
+                const match = (s.year || s.name).match(/\b([7-9]|1[0-2])\b/);
+                if (match && parseInt(match[1]) >= 11) {
+                    if (currentUser.strand && s.strand !== currentUser.strand) return false;
+                    return true;
+                }
+                return false;
+            });
+        }
+    }
+    
+    const yearSections = yearSectionsData.map(s => s.name);
 
     const visiblePinnedSections = pinnedSections.filter(sec => yearSections.includes(sec) || sec === 'all');
     const unpinned = yearSections.filter(s => !visiblePinnedSections.includes(s));
@@ -1998,8 +2016,10 @@ window.promptAddViewSection = function () {
         yearSections = yearSections.filter(s => {
             const match = (s.year || s.name).match(/\b([7-9]|1[0-2])\b/);
             if (match && parseInt(match[1]) >= 11) {
-                // If the user has a specific strand, filter by strand too
-                if (currentUser.strand && s.strand && s.strand !== currentUser.strand) return false;
+                // If the user has a specific strand, strictly require the section to have the SAME strand
+                if (currentUser.strand) {
+                    if (s.strand !== currentUser.strand) return false;
+                }
                 return true;
             }
             return false;
@@ -2131,7 +2151,25 @@ function renderDetailedSubjectView(container, subject) {
         const gNum = sObj.year.replace(/\D/g, '');
         return gNum ? `${gNum} - ${name}` : name;
     };
-    const yearSections = sectionsData.filter(s => !s.schoolYear || s.schoolYear === (window.currentRecordSchoolYear || '2025-2026')).map(s => s.name);
+    let yearSectionsData = sectionsData.filter(s => !s.schoolYear || s.schoolYear === (window.currentRecordSchoolYear || '2025-2026'));
+    if (currentUser.role === 'curriculum_coordinator') {
+        if (currentUser.department === 'JHS') {
+            yearSectionsData = yearSectionsData.filter(s => {
+                const match = (s.year || s.name).match(/\b([7-9]|1[0-2])\b/);
+                return match && parseInt(match[1]) <= 10;
+            });
+        } else if (currentUser.department === 'SHS') {
+            yearSectionsData = yearSectionsData.filter(s => {
+                const match = (s.year || s.name).match(/\b([7-9]|1[0-2])\b/);
+                if (match && parseInt(match[1]) >= 11) {
+                    if (currentUser.strand && s.strand !== currentUser.strand) return false;
+                    return true;
+                }
+                return false;
+            });
+        }
+    }
+    const yearSections = yearSectionsData.map(s => s.name);
 
     let visiblePinnedSections = pinnedSections.filter(sec => yearSections.includes(sec));
     
