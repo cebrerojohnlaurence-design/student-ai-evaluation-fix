@@ -2192,11 +2192,15 @@ async function loadAcademicReport() {
         advName = s.adviser;
     }
 
-    let principalName = window.globalSettings?.principal_name || 'Principal Name';
-    if (typeof teachers !== 'undefined') {
-        const p = teachers.find(t => t.id && (t.id.startsWith('PRIN-') || t.id.toLowerCase() === 'principal'));
-        if (p) principalName = p.name;
+    let principalName = window.globalSettings?.principal_name;
+    if (!principalName) {
+        try {
+            const allTeachers = typeof teachers !== 'undefined' ? teachers : JSON.parse(localStorage.getItem('cnhs_teachers') || '[]');
+            const p = allTeachers.find(t => t.role === 'principal' || (t.id && (t.id.startsWith('PRIN') || t.id.toLowerCase() === 'principal')));
+            if (p) principalName = p.name;
+        } catch(e) {}
     }
+    if (!principalName) principalName = 'Principal Name';
     if (typeof currentUser !== 'undefined' && currentUser.role === 'principal') {
         principalName = currentUser.name;
     }
