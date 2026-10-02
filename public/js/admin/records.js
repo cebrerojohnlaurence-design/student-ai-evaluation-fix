@@ -1967,14 +1967,35 @@ function removePinnedSection(sec) {
 window.promptAddViewSection = function () {
     const rawSec = localStorage.getItem('cnhs_sections');
     const sectionsData = rawSec ? JSON.parse(rawSec) : [];
-    const yearSections = sectionsData.filter(s => !s.schoolYear || s.schoolYear === (window.currentRecordSchoolYear || '2025-2026')).map(s => s.name);
+    let yearSections = sectionsData.filter(s => !s.schoolYear || s.schoolYear === (window.currentRecordSchoolYear || '2025-2026'));
+
+    const isSHSUser = currentUser.department === 'SHS' || currentUser.level === 'SH' || currentUser.strand;
+
+    if (isSHSUser) {
+        yearSections = yearSections.filter(s => {
+            const match = (s.year || s.name).match(/\b([7-9]|1[0-2])\b/);
+            if (match && parseInt(match[1]) >= 11) {
+                // If the user has a specific strand, filter by strand too
+                if (currentUser.strand && s.strand && s.strand !== currentUser.strand) return false;
+                return true;
+            }
+            return false;
+        });
+    } else if (currentUser.department === 'JHS' || currentUser.level === 'JH') {
+        yearSections = yearSections.filter(s => {
+            const match = (s.year || s.name).match(/\b([7-9]|1[0-2])\b/);
+            return match && parseInt(match[1]) <= 10;
+        });
+    }
+
+    const yearSectionNames = yearSections.map(s => s.name);
 
     let availableForSelect = Array.from(new Set([
         ...(currentUser.role === 'teacher' && currentUser.handledSections ? currentUser.handledSections : []),
         ...pinnedSections
     ])).filter(s => s !== 'all');
 
-    const unpinned = yearSections.filter(s => !availableForSelect.includes(s));
+    const unpinned = yearSectionNames.filter(s => !availableForSelect.includes(s));
 
     const getGrade = (secName) => {
         let match = secName.match(/\b([7-9]|1[0-2])\b/);
