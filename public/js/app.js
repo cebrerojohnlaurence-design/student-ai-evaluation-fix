@@ -677,6 +677,12 @@ function logout(e) {
     }
 
     sessionStorage.removeItem('cnhs_session');
+    // Clear all user-specific local state to avoid bleeding data to the next login
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('pinned_sections_') || key.startsWith('cnhs_')) {
+            localStorage.removeItem(key);
+        }
+    });
     location.href = `/login/${loginRole}`;
 }
 

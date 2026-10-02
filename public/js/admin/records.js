@@ -1822,6 +1822,14 @@ function renderMasterRecordsView(container) {
                 return false;
             });
         }
+    } else if (currentUser.role === 'teacher') {
+        const tLvl = currentUser.level || 'JH';
+        yearSectionsData = yearSectionsData.filter(s => {
+            const match = (s.year || s.name).match(/\b([7-9]|1[0-2])\b/);
+            if (!match) return true;
+            const g = parseInt(match[1]);
+            return tLvl === 'JH' ? g <= 10 : g >= 11;
+        });
     }
     
     const yearSections = yearSectionsData.map(s => s.name);

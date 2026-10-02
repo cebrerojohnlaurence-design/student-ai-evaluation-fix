@@ -15,10 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function logoutStudent() {
+    window.logoutStudent = function() {
         sessionStorage.removeItem('cnhs_student_session');
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('pinned_sections_') || key.startsWith('cnhs_')) {
+                localStorage.removeItem(key);
+            }
+        });
         window.location.href = '/login/student';
-    }
+    };
 
     window.studentData = null;
     window.activeQuarter = null; // null means 'All Quarters' or default to 1
