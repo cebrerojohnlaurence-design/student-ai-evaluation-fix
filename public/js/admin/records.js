@@ -794,7 +794,26 @@ function getTeacherSections(t) {
     const sections = new Set();
     students.forEach(s => {
         if (s.section && s.section !== 'null' && s.subjects && s.subjects.some(sub => subjects.includes(sub.n))) {
-            sections.add(s.section);
+            let addIt = true;
+            if (currentUser.role === 'curriculum_coordinator') {
+                let gl = null;
+                const match = s.section.match(/\b([7-9]|1[0-2])\b/);
+                if (match) {
+                    gl = parseInt(match[1]);
+                } else {
+                    let allSecs = [];
+                    try { allSecs = JSON.parse(localStorage.getItem('cnhs_sections') || '[]'); } catch(e){}
+                    const sd = allSecs.find(x => x.name.toLowerCase() === s.section.toLowerCase());
+                    if (sd && sd.year) {
+                        const m2 = sd.year.match(/\b([7-9]|1[0-2])\b/);
+                        if (m2) gl = parseInt(m2[1]);
+                    }
+                }
+                
+                if (currentUser.department === 'JHS' && gl && gl >= 11) addIt = false;
+                if (currentUser.department === 'SHS' && gl && gl <= 10) addIt = false;
+            }
+            if (addIt) sections.add(s.section);
         }
     });
     return [...sections].sort();

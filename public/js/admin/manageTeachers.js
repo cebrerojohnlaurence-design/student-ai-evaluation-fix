@@ -204,7 +204,7 @@ function setTeacherLevelFilter(l) {
     renderManageTeachers(document.getElementById('content-area'));
 }
 
-function setTeacherFormLevel(level) {
+function setTeacherFormLevel(level, skipRefresh = false) {
     document.getElementById('t-level').value = level;
     ['JH', 'SH'].forEach(l => {
         const btn = document.getElementById(`level-btn-${l}`);
@@ -219,7 +219,7 @@ function setTeacherFormLevel(level) {
     });
     const strandWrap = document.getElementById('t-strand-wrap');
     if (strandWrap) strandWrap.classList.toggle('hidden', level === 'JH');
-    refreshTeacherSubjectCheckboxes();
+    if (!skipRefresh) refreshTeacherSubjectCheckboxes();
 }
 
 function refreshTeacherSubjectCheckboxes(preChecked) {
@@ -323,7 +323,7 @@ async function saveTeacher(e) {
     try {
         let res, data;
         if (dbId) {
-            const payload = { name, username: user, subject, level, strand };
+            const payload = { name, username: user, subject, level, strand, school_year: window.currentRecordSchoolYear || '2025-2026' };
             if (pass) payload.password = pass;
             res = await fetch(`/api/teachers/${dbId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload) });
             data = await res.json();
@@ -361,7 +361,7 @@ function editTeacher(id) {
 
     // Set level
     const level = t.level || 'JH';
-    setTeacherFormLevel(level);
+    setTeacherFormLevel(level, true);
     if (level === 'SH' && t.strand) {
         const sel = document.getElementById('t-strand');
         if (sel) sel.value = t.strand;
