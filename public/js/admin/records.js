@@ -2029,7 +2029,9 @@ function removePinnedSection(sec) {
 
         students.forEach(s => {
             if (s.section !== sec) return;
-            const idx = s.subjects.findIndex(x => x.n === subject);
+            const subjectList = subject.split(',').map(sub => sub.trim()).filter(Boolean);
+            s.subjects = (s.subjects || []).filter(x => !subjectList.includes(x.n));
+            const idx = -1;
             if (idx !== -1) s.subjects.splice(idx, 1);
             computeStudentGWA(s);
         });

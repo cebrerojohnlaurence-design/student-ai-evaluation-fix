@@ -195,10 +195,11 @@ class StudentSubjectController extends Controller
 
         // Get all students in this section
         $students = Student::where('section', $section)->get();
+        $subjectList = array_map('trim', explode(',', $subject));
 
         foreach ($students as $student) {
             $query = StudentSubject::where('student_id', $student->id)
-                ->where('subject_name', $subject);
+                ->whereIn('subject_name', $subjectList);
 
             if ($quarter) {
                 $query->where('quarter', $quarter);

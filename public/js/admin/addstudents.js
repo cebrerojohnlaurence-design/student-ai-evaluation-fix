@@ -177,36 +177,22 @@ async function manualAdd(e) {
 }
 
 async function deleteStudentFromDB(id, lrn) {
-    showConfirm('Delete this student?', () => {
+    showConfirm('Delete this student?', async () => {
         const studentToRestore = students.find(s => s.lrn === lrn);
         if (!studentToRestore) return;
         
-        // Optimistically remove from UI
-        students = students.filter(s => s.lrn !== lrn);
-        navigate('add-student');
-    
-    showUndoToast(`Deleted student ${studentToRestore.name}`, 
-    async () => {
-        // Undo Action
-        students.push(studentToRestore);
-        navigate('add-student');
-        showMessage('Student restored.');
-    }, 
-    async () => {
-        // Finalize Action
         try {
             const res = await fetch(`/api/students/${id}`, { method: 'DELETE', headers: { 'Accept': 'application/json' } });
-            if (!res.ok) {
-                showMessage('Failed to delete student.', true);
-                students.push(studentToRestore);
+            if (res.ok) {
+                students = students.filter(s => s.lrn !== lrn);
                 navigate('add-student');
+                showMessage('Student deleted.');
+            } else {
+                showMessage('Failed to delete student.', true);
             }
         } catch {
             showMessage('Network error.', true);
-            students.push(studentToRestore);
-            navigate('add-student');
         }
-        });
     });
 }
 

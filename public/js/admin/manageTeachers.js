@@ -393,35 +393,19 @@ async function deleteTeacher(dbId, tid) {
     const t = teachers.find(x => x.id === tid);
     if (!t) return;
 
-    showConfirm(`Delete teacher ${t.name}?`, () => {
-        // Optimistically remove from UI
-        teachers = teachers.filter(x => x.id !== tid);
-        navigate('manage-teachers');
-
-        showUndoToast(`Deleted teacher ${t.name}`,
-            async () => {
-                // Undo Action
-                teachers.push(t);
+    showConfirm(`Delete teacher ${t.name}?`, async () => {
+        try {
+            const res = await fetch(`/api/teachers/${dbId}`, { method: 'DELETE', headers: { 'Accept': 'application/json' } });
+            if (res.ok) {
+                teachers = teachers.filter(x => x.id !== tid);
                 navigate('manage-teachers');
-                showMessage('Teacher restored.');
-            },
-            async () => {
-                // Finalize Action
-                try {
-                    const res = await fetch(`/api/teachers/${dbId}`, { method: 'DELETE', headers: { 'Accept': 'application/json' } });
-                    if (res.ok) {
-                        logActivity(`Admin deleted teacher: ${t.name}`);
-                        showMessage('Teacher removed.');
-                    } else {
-                        showMessage('Failed to delete.', true);
-                        teachers.push(t);
-                        navigate('manage-teachers');
-                    }
-                } catch {
-                    showMessage('Network error.', true);
-                    teachers.push(t);
-                    navigate('manage-teachers');
-                }
-            });
+                logActivity(`Admin deleted teacher: ${t.name}`);
+                showMessage('Teacher removed.');
+            } else {
+                showMessage('Failed to delete.', true);
+            }
+        } catch {
+            showMessage('Network error.', true);
+        }
     });
 }
