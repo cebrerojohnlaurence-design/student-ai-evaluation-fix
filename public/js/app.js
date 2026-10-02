@@ -1926,11 +1926,11 @@ async function showReport(s) {
             </div>
 
             <div>
-                <label id="report-grading-label" class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">${isSH ? 'Term' : 'Grading Period'}</label>
+                <label id="report-grading-label" class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">TERM</label>
                 <div class="grid grid-cols-3 gap-2">
-                   <button type="button" id="sembtn-1" onclick="selectSemester(1)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-primary bg-primary text-white">${isSH ? 'Term 1' : '1st Sem'}</button>
-                   <button type="button" id="sembtn-2" onclick="selectSemester(2)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">${isSH ? 'Term 2' : '2nd Sem'}</button>
-                   <button type="button" id="sembtn-3" onclick="selectSemester(3)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">${isSH ? 'Term 3' : 'All'}</button>
+                   <button type="button" id="sembtn-1" onclick="selectSemester(1)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-primary bg-primary text-white">Term 1</button>
+                   <button type="button" id="sembtn-2" onclick="selectSemester(2)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">Term 2</button>
+                   <button type="button" id="sembtn-3" onclick="selectSemester(3)" class="py-2.5 rounded-xl border-2 text-xs font-bold transition border-gray-200 bg-white text-gray-600 hover:border-primary hover:text-primary">Term 3</button>
                 </div>
             </div>
 
@@ -1995,10 +1995,10 @@ function onReportGradeChange(gradeStr) {
     const btn2 = document.getElementById('sembtn-2');
     const btn3 = document.getElementById('sembtn-3');
     const lbl = document.getElementById('report-grading-label');
-    if(btn1) btn1.innerText = isSH ? 'Term 1' : '1st Sem';
-    if(btn2) btn2.innerText = isSH ? 'Term 2' : '2nd Sem';
-    if(btn3) btn3.innerText = isSH ? 'Term 3' : 'All';
-    if(lbl) lbl.innerText = isSH ? 'TERM' : 'GRADING PERIOD';
+    if(btn1) btn1.innerText = 'Term 1';
+    if(btn2) btn2.innerText = 'Term 2';
+    if(btn3) btn3.innerText = 'Term 3';
+    if(lbl) lbl.innerText = 'TERM';
 
     if (_reportStudent) _reportStudent._selectedYear = gradeStr;
     _refreshSubjectPreview();

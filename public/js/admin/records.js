@@ -1818,17 +1818,17 @@ function renderMasterRecordsView(container) {
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <div class="flex items-center bg-gray-200 rounded-full p-0.5 mr-3">
-                        ${(window.studentsAnalyticsLevel === 'SH' ? [1, 2, 3] : [1, 2, 3, 4]).map(q => `
+                        ${[1, 2, 3].map(q => `
                             <button onclick="setRecordQuarter(${q})"
                                     class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
                                            ${window.currentRecordQuarter === q
             ? 'bg-white text-primary shadow-sm'
             : 'text-gray-500 hover:bg-white/50 hover:text-gray-700'}">
-                                ${window.studentsAnalyticsLevel === 'SH' ? 'T' : 'Q'}${q}
+                                Term ${q}
                             </button>
                         `).join('')}
                     </div>
-                    ${window.studentsAnalyticsLevel !== 'SH' ? `
+                    ${false ? `
                     <div class="flex items-center bg-gray-200 rounded-full p-0.5 mr-3">
                         <button onclick="setRecordSemester(1)"
                                 class="px-3 py-1 rounded-full text-[10px] font-bold uppercase transition
