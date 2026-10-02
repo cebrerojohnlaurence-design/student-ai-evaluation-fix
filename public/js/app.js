@@ -2539,13 +2539,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('app-container').classList.remove('hidden');
 
             // --- 1. IMMEDIATE UI RESTORATION (Prevents "GUEST" flicker) ---
-            currentUser.role = savedUser.role;
-            currentUser.name = savedUser.name;
-            currentUser.id = savedUser.id;
-            currentUser.db_id = savedUser.db_id;
-            currentUser.subject = savedUser.subject;
-            currentUser.isAdviser = savedUser.isAdviser;
-            currentUser.section = savedUser.section;
+            Object.assign(currentUser, savedUser);
 
             if (document.getElementById('role-tag')) {
                 document.getElementById('role-tag').innerText = currentUser.role.toUpperCase();
