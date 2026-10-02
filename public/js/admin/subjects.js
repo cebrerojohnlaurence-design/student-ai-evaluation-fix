@@ -99,7 +99,7 @@ function renderJHSubjects(area) {
             if (parsed.grade_levels) {
                 grades = parsed.grade_levels.map(g => parseInt(g.replace(/\D/g, ''))).filter(n => !isNaN(n));
             }
-        } catch(e){}
+        } catch (e) { }
     }
     for (var gi = 0; gi < grades.length; gi++) {
         var g = grades[gi];
@@ -184,7 +184,7 @@ function renderSHSubjects(area) {
             if (parsed.grade_levels) {
                 grades = parsed.grade_levels.map(g => parseInt(g.replace(/\D/g, ''))).filter(n => !isNaN(n));
             }
-        } catch(e){}
+        } catch (e) { }
     }
     for (var gi = 0; gi < grades.length; gi++) {
         var g = grades[gi];
@@ -361,22 +361,22 @@ function deleteSubject(key, idx) {
     var list = getCustomSubjectList(key);
     var name = list[idx];
     if (!confirm('Delete subject "' + name + '"?')) return;
-    
+
     list.splice(idx, 1);
     setCustomSubjectList(key, list);
     renderSubjectContent();
-    
-    showUndoToast(`Deleted subject "${name}"`, 
-    async () => {
-        var listNow = getCustomSubjectList(key);
-        listNow.splice(idx, 0, name);
-        setCustomSubjectList(key, listNow);
-        renderSubjectContent();
-        showMessage('Subject restored.');
-    }, 
-    async () => {
-        // No server finalize needed, already saved to local storage
-    });
+
+    showUndoToast(`Deleted subject "${name}"`,
+        async () => {
+            var listNow = getCustomSubjectList(key);
+            listNow.splice(idx, 0, name);
+            setCustomSubjectList(key, listNow);
+            renderSubjectContent();
+            showMessage('Subject restored.');
+        },
+        async () => {
+            // No server finalize needed, already saved to local storage
+        });
 }
 
 // ─── AI SUBJECT SCAN ───────────────────────────────────────────────────────────

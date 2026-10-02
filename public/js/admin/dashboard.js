@@ -74,23 +74,42 @@ function getBaseDashboardStudents() {
             });
         } else if (currentUser.department === 'SHS') {
             curr = curr.filter(s => {
-                if (!s.section) return true; // Show unassigned
-                const match = s.section.match(/\b([7-9]|1[0-2])\b/);
-                if (match && parseInt(match[1]) >= 11) return true;
-                if (typeof teachers !== 'undefined') {
-                    const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s.section.toLowerCase()));
-                    if (adv && adv.level === 'SH') return true;
-                }
-                // Check localStorage sections for grade level
-                try {
-                    const savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
-                    const secData = savedSections.find(x => x.name === s.section);
-                    if (secData && secData.year) {
-                        const m = secData.year.match(/\b([7-9]|1[0-2])\b/);
-                        if (m && parseInt(m[1]) >= 11) return true;
+                let isSHSStudent = false;
+                let belongsToStrand = true;
+
+                if (!s.section) {
+                    if (s.strand) {
+                        isSHSStudent = true;
+                        if (currentUser.strand && s.strand !== currentUser.strand) belongsToStrand = false;
+                    } else {
+                        // Unassigned student with NO strand. Do not show on strand-specific SHS dashboards.
+                        if (currentUser.strand) belongsToStrand = false;
+                        else isSHSStudent = true; // generic SHS coordinator
                     }
-                } catch (e) { }
-                return false;
+                } else {
+                    const match = s.section.match(/\b([7-9]|1[0-2])\b/);
+                    if (match && parseInt(match[1]) >= 11) isSHSStudent = true;
+                    if (!isSHSStudent && typeof teachers !== 'undefined') {
+                        const adv = teachers.find(t => t.is_adviser && (t.section || '').split(',').map(x => x.trim().toLowerCase()).includes(s.section.toLowerCase()));
+                        if (adv && adv.level === 'SH') isSHSStudent = true;
+                    }
+                    // Check localStorage sections
+                    let secData = null;
+                    try {
+                        const savedSections = JSON.parse(((typeof globalSettings !== 'undefined' && globalSettings.cnhs_sections) ? globalSettings.cnhs_sections : localStorage.getItem('cnhs_sections')) || '[]');
+                        secData = savedSections.find(x => x.name === s.section);
+                        if (secData && secData.year) {
+                            const m = secData.year.match(/\b([7-9]|1[0-2])\b/);
+                            if (m && parseInt(m[1]) >= 11) isSHSStudent = true;
+                        }
+                    } catch (e) { }
+
+                    if (currentUser.strand) {
+                        if (s.strand && s.strand !== currentUser.strand) belongsToStrand = false;
+                        else if (secData && secData.strand && secData.strand !== currentUser.strand) belongsToStrand = false;
+                    }
+                }
+                return isSHSStudent && belongsToStrand;
             });
         }
     }
