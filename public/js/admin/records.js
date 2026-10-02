@@ -310,11 +310,29 @@ function promptAddAdviserSection() {
     const advisedSections = teachers.filter(t => t.is_adviser).flatMap(t => (t.section || '').split(',').map(s => s.trim()).filter(Boolean));
     const availableSections = allSections.filter(sec => !advisedSections.includes(sec));
 
-    let jhsSections = availableSections.filter(sec => !sec.startsWith('11') && !sec.startsWith('12'));
-    let shsSections = availableSections.filter(sec => sec.startsWith('11') || sec.startsWith('12'));
+    let jhsSections = availableSections.filter(sec => {
+        let match = sec.match(/\b([7-9]|1[0-2])\b/);
+        return match && parseInt(match[1]) <= 10;
+    });
+    let shsSections = availableSections.filter(sec => {
+        let match = sec.match(/\b([7-9]|1[0-2])\b/);
+        if (match && parseInt(match[1]) >= 11) {
+            const myTeacherRec = teachers.find(t => t.id === currentUser.id);
+            const myStrand = myTeacherRec ? (myTeacherRec.strand || currentUser.strand) : null;
+            if (myStrand) {
+                try {
+                    let saved = JSON.parse(localStorage.getItem('cnhs_sections') || '[]');
+                    let sd = saved.find(x => x.name === sec);
+                    if (sd && sd.strand && sd.strand !== myStrand) return false;
+                } catch(e) {}
+            }
+            return true;
+        }
+        return false;
+    });
 
     const myTeacherRec = teachers.find(t => t.id === currentUser.id);
-    const myLevel = myTeacherRec ? (myTeacherRec.level || 'JH') : 'JH';
+    const myLevel = myTeacherRec ? (myTeacherRec.level || currentUser.level || 'JH') : (currentUser.level || 'JH');
 
     // Enforce Level Constraints
     if (myLevel === 'JH') shsSections = [];
