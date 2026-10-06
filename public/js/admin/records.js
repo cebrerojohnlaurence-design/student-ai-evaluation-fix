@@ -2495,7 +2495,7 @@ function filterRecordsTable() {
     const visibleSubjects = currentUser.role === 'teacher' ? (currentUser.subject ? currentUser.subject.split(',').map(s => s.trim()) : []) : resolveSubjectsForSection(currentRecordSection || 'All', students.filter(s => currentRecordSection === 'all' || s.section === currentRecordSection));
 
     let filtered = students;
-    if (currentUser.role === 'teacher') {
+    if (currentUser.role === 'teacher' && currentRecordSection === 'all') {
         const allowed = Array.from(new Set([...(currentUser.handledSections || []), ...(typeof pinnedSections !== 'undefined' ? pinnedSections : [])]));
         if (allowed.length > 0) {
             filtered = filtered.filter(s => allowed.includes(s.section));

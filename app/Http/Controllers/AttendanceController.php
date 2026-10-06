@@ -8,10 +8,11 @@ use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
 {
-    public function index($lrn)
+    public function index(Request $request, $lrn)
     {
+        $sy = $request->query('school_year', '2025-2026');
         $student = Student::where('lrn', $lrn)->firstOrFail();
-        return response()->json($student->attendances()->orderBy('month')->get());
+        return response()->json($student->attendances()->where('school_year', $sy)->orderBy('month')->get());
     }
 
     public function saveBulk(Request $request)
@@ -59,9 +60,9 @@ class AttendanceController extends Controller
                     ]
                 );
 
-                // Update overall attendance percent
-                $totalDays = $student->attendances()->sum('school_days');
-                $totalPresent = $student->attendances()->sum('days_present');
+                // Update overall attendance percent for the current school year
+                $totalDays = $student->attendances()->where('school_year', $school_year)->sum('school_days');
+                $totalPresent = $student->attendances()->where('school_year', $school_year)->sum('days_present');
                 $student->attendance = $totalDays > 0 ? round(($totalPresent / $totalDays) * 100, 2) : 0;
                 $student->save();
             }
@@ -70,14 +71,15 @@ class AttendanceController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function getSectionAttendance($section)
+    public function getSectionAttendance(Request $request, $section)
     {
+        $sy = $request->query('school_year', '2025-2026');
         // Get all students in the section
         $students = Student::where('section', $section)->get();
         $results = [];
 
         foreach ($students as $student) {
-            $results[$student->lrn] = $student->attendances()->orderBy('month')->get()->map(function($att) {
+            $results[$student->lrn] = $student->attendances()->where('school_year', $sy)->orderBy('month')->get()->map(function($att) {
                 $att->daily_marks = $att->daily_marks ? json_decode($att->daily_marks) : null;
                 return $att;
             });

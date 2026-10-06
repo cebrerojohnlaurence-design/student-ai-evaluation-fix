@@ -585,10 +585,8 @@
     {{-- Load core logic --}}
     <script src="{{ asset('js/subjectCatalog.js') }}"></script>
     <script src="{{ asset('js/app.js') }}"></script>
-
     {{-- Load all admin render functions (shared even for teacher role via role checks) --}}
     <script src="{{ asset('js/admin/dashboard.js') }}"></script>
-
     <script src="{{ asset('js/admin/addstudents.js') }}"></script>
     <script src="{{ asset('js/admin/records.js') }}"></script>
     <script src="{{ asset('js/admin/manageTeachers.js') }}"></script>

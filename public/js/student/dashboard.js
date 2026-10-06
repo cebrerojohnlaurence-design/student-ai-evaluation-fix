@@ -66,7 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Populate Enrollment Selector Menu
             const selector = document.getElementById('enrollment-selector');
-            let history = window.studentData.enrollment_history || [];
+            let rawHistory = window.studentData.enrollment_history || [];
+            let history = Array.isArray(rawHistory) ? JSON.parse(JSON.stringify(rawHistory)) : [];
 
             // Check if there's an active current year enrollment not explicitly in history (from primary student table)
             if (history.length === 0 && window.studentData.section) {
@@ -78,19 +79,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Also ensure any subjects we fetched have their school years in the dropdown, even if not explicitly in enrollment array
-            const subjectYears = new Set(window.studentData.subjects.map(s => s.school_year).filter(Boolean));
+            const subjectYears = new Set((window.studentData.subjects || []).map(s => s.school_year || '2025-2026').filter(Boolean));
             subjectYears.forEach(y => {
                 if (!history.find(h => h.school_year === y)) {
-                    history.push({ school_year: y, section: 'Unknown Section', adviser: 'Pending Assignment' });
+                    history.push({ school_year: y, section: window.studentData.section || 'General', adviser: window.studentData.adviser || 'Pending Assignment' });
                 }
             });
 
             // Sort history descending by year (basic string sort works for YYYY-YYYY format)
             history.sort((a, b) => b.school_year.localeCompare(a.school_year));
+            window.studentDashboardHistory = history;
 
             if (history.length > 0) {
-                selector.innerHTML = history.map((h, i) => `<option value="${i}">SY ${h.school_year} — ${h.section}</option>`).join('');
+                // Determine default selected option:
+                // If history[0] (active/latest) has NO encoded grades, but another SY (e.g. 2025-2026) DOES have grades, default to that SY!
+                let defaultIdx = 0;
+                const encodedYears = new Set((window.studentData.subjects || []).filter(s => s.g !== null && s.g !== undefined).map(s => s.school_year || '2025-2026'));
+                if (encodedYears.size > 0) {
+                    const idxWithGrades = history.findIndex(h => encodedYears.has(h.school_year));
+                    if (idxWithGrades !== -1) {
+                        defaultIdx = idxWithGrades;
+                    }
+                }
+
+                selector.innerHTML = history.map((h, i) => `<option value="${i}" ${i === defaultIdx ? 'selected="selected"' : ''}>SY ${h.school_year} — ${h.section}</option>`).join('');
                 selector.classList.remove('hidden');
+                selector.value = defaultIdx;
             } else {
                 selector.classList.add('hidden');
                 document.getElementById('student-section').innerText = 'Unassigned';
@@ -143,10 +157,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!window.studentData) return;
 
         const selector = document.getElementById('enrollment-selector');
-        const history = window.studentData.enrollment_history || [];
+        const history = window.studentDashboardHistory || window.studentData.enrollment_history || [];
 
         let currentEnrollment = null;
-        if (selector && selector.value !== '') {
+        if (selector && selector.value !== '' && history[selector.value]) {
             currentEnrollment = history[selector.value];
         } else if (history.length > 0) {
             currentEnrollment = history[0]; // Default to most recent
@@ -160,12 +174,15 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('student-adviser').innerText = window.studentData.adviser || 'Pending Assignment';
         }
 
-        const syTarget = currentEnrollment ? currentEnrollment.school_year : null;
+        const syTarget = currentEnrollment ? currentEnrollment.school_year : (window.currentRecordSchoolYear || '2025-2026');
 
         document.getElementById('active-quarter-label').innerText = 'ANNUAL GRADE MATRIX';
 
-        // Filter subjects by the selected school year
-        let subjects = window.studentData.subjects.filter(s => !syTarget || s.school_year === syTarget);
+        // Filter subjects by the selected school year (with fallback for missing/null school_year)
+        let subjects = (window.studentData.subjects || []).filter(s => {
+            const sSY = s.school_year || '2025-2026';
+            return sSY === syTarget;
+        });
 
         // Group by Subject Name for the Matrix
         let groupedSubjects = {};
@@ -203,15 +220,16 @@ document.addEventListener('DOMContentLoaded', () => {
         stdSubjects.forEach(sub => {
             groupedSubjects[sub] = {
                 name: sub,
-                school_year: syTarget || window.currentRecordSchoolYear || '2025-2026',
+                school_year: syTarget,
                 q1: null, q2: null, q3: null, q4: null
             };
         });
 
         subjects.forEach(s => {
             if (!groupedSubjects[s.n]) {
-                groupedSubjects[s.n] = { name: s.n, school_year: s.school_year, q1: null, q2: null, q3: null, q4: null };
+                groupedSubjects[s.n] = { name: s.n, school_year: syTarget, q1: null, q2: null, q3: null, q4: null };
             }
+            groupedSubjects[s.n].school_year = syTarget;
             if (s.g && s.quarter) {
                 groupedSubjects[s.n]['q' + parseInt(s.quarter)] = parseFloat(s.g);
             }
@@ -391,11 +409,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Attendance
-        if (window.studentData && window.studentData.attendance !== null && window.studentData.attendance !== undefined && parseFloat(window.studentData.attendance) > 0) {
-            document.getElementById('student-attendance').innerText = parseFloat(window.studentData.attendance).toFixed(2);
+        if (window.studentData && window.studentData.attendance_records) {
+            const syAtts = window.studentData.attendance_records.filter(a => a.school_year === syTarget);
+            const totalDays = syAtts.reduce((sum, a) => sum + (parseFloat(a.school_days) || 0), 0);
+            const totalPres = syAtts.reduce((sum, a) => sum + (parseFloat(a.days_present) || 0), 0);
+            
+            if (totalDays > 0) {
+                const pct = (totalPres / totalDays) * 100;
+                document.getElementById('student-attendance').innerText = pct.toFixed(2);
+            } else {
+                document.getElementById('student-attendance').innerText = "--";
+            }
         } else {
             document.getElementById('student-attendance').innerText = "--";
         }
+        
+        calculateQuarterAverages();
     }
 
     // --- Profile Upload Logic ---
@@ -678,63 +707,48 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.openAttendanceModal = function() {
-        const att = window.studentData && window.studentData.attendance_months;
-        const overallPct = window.studentData && parseFloat(window.studentData.attendance);
+        const selector = document.getElementById('enrollment-selector');
+        const history = window.studentDashboardHistory || window.studentData.enrollment_history || [];
+        
+        let currentEnrollment = null;
+        if (selector && selector.value !== '' && history[selector.value]) {
+            currentEnrollment = history[selector.value];
+        } else if (history.length > 0) {
+            currentEnrollment = history[0];
+        }
 
-        // No monthly data at all — show overall % if available, else "No Data"
-        if (!att) {
-            if (overallPct > 0) {
-                Swal.fire({
-                    title: '<span class="text-blue-800 font-black">Attendance Record</span>',
-                    html: `
-                        <div class="text-center py-4">
-                            <div class="text-5xl font-black text-blue-700 mb-2">${overallPct.toFixed(2)}%</div>
-                            <p class="text-sm text-gray-500">Overall Present Days Rate</p>
-                            <p class="text-xs text-gray-400 mt-3 italic">Monthly breakdown has not been encoded yet.</p>
-                        </div>`,
-                    confirmButtonText: 'Close',
-                    confirmButtonColor: '#3B82F6'
-                });
-            } else {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'No Data',
-                    text: 'Attendance data has not been encoded yet.'
-                });
-            }
+        const syTarget = currentEnrollment ? currentEnrollment.school_year : (window.currentRecordSchoolYear || '2025-2026');
+        
+        const allAtts = window.studentData && window.studentData.attendance_records ? window.studentData.attendance_records : [];
+        const syAtts = allAtts.filter(a => a.school_year === syTarget);
+
+        if (syAtts.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'No Data',
+                text: 'Attendance data has not been encoded for SY ' + syTarget + ' yet.'
+            });
             return;
         }
 
         let html = '<div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="bg-blue-50 text-blue-800 uppercase text-[10px] font-bold"><tr><th class="px-3 py-2 border">Month</th><th class="px-3 py-2 border text-center">School Days</th><th class="px-3 py-2 border text-center">Present</th><th class="px-3 py-2 border text-center">Absent</th></tr></thead><tbody>';
         
-        let months = ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
         let tDays = 0, tPres = 0, tAbs = 0;
         
-        months.forEach(m => {
-            let mk = m.toLowerCase();
-            let d = att[mk + '_days'] || 0;
-            let p = att[mk + '_present'] || 0;
+        syAtts.forEach(att => {
+            let d = parseInt(att.school_days) || 0;
+            let p = parseInt(att.days_present) || 0;
             let a = d - p;
             if (a < 0) a = 0;
             
             if (d > 0) {
                 tDays += d; tPres += p; tAbs += a;
-                html += `<tr><td class="px-3 py-2 border font-bold text-gray-700">${m}</td><td class="px-3 py-2 border text-center">${d}</td><td class="px-3 py-2 border text-center">${p}</td><td class="px-3 py-2 border text-center text-red-500">${a}</td></tr>`;
+                html += `<tr><td class="px-3 py-2 border font-bold text-gray-700">${att.month}</td><td class="px-3 py-2 border text-center">${d}</td><td class="px-3 py-2 border text-center">${p}</td><td class="px-3 py-2 border text-center text-red-500">${a}</td></tr>`;
             }
         });
         
         if (tDays === 0) {
-            // Monthly object exists but all zeros — show overall if available
-            if (overallPct > 0) {
-                html = `
-                    <div class="text-center py-4">
-                        <div class="text-5xl font-black text-blue-700 mb-2">${overallPct.toFixed(2)}%</div>
-                        <p class="text-sm text-gray-500">Overall Present Days Rate</p>
-                        <p class="text-xs text-gray-400 mt-3 italic">Monthly breakdown has not been encoded yet.</p>
-                    </div>`;
-            } else {
-                html = '<p class="text-gray-500 text-sm">No monthly attendance encoded yet.</p>';
-            }
+            html = `<p class="text-gray-500 text-sm">No monthly attendance encoded yet for SY ${syTarget}.</p>`;
         } else {
             html += `<tr class="bg-gray-100 font-bold"><td class="px-3 py-2 border">TOTAL</td><td class="px-3 py-2 border text-center">${tDays}</td><td class="px-3 py-2 border text-center text-green-600">${tPres}</td><td class="px-3 py-2 border text-center text-red-600">${tAbs}</td></tr>`;
             html += '</tbody></table></div>';
@@ -747,4 +761,6 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmButtonColor: '#3B82F6'
         });
     };
+
+    window.renderEnrolledGrades = renderEnrolledGrades;
 });

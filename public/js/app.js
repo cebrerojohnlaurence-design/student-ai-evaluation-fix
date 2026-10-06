@@ -401,7 +401,21 @@ async function initAppData() {
             fetch('/api/grades/all-subjects?school_year=' + syParam, { headers: { 'Accept': 'application/json' } })
         ]);
 
-        if (studRes.ok) students = await studRes.json();
+        if (studRes.ok) {
+            let rawStudents = await studRes.json();
+            if (currentUser.role === 'curriculum_coordinator') {
+                if (currentUser.department === 'JHS') {
+                    rawStudents = rawStudents.filter(s => s.department === 'JHS' || !s.department);
+                } else if (currentUser.department === 'SHS') {
+                    if (currentUser.strand) {
+                        rawStudents = rawStudents.filter(s => s.department === 'SHS' && s.strand === currentUser.strand);
+                    } else {
+                        rawStudents = rawStudents.filter(s => s.department === 'SHS');
+                    }
+                }
+            }
+            students = rawStudents;
+        }
         if (teachRes.ok) teachers = await teachRes.json();
 
         let allSubjectsData = [];

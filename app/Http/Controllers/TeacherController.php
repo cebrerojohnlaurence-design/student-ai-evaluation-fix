@@ -105,7 +105,7 @@ class TeacherController extends Controller
             'name'       => 'required|string|max:150',
             'username'   => 'required|string|max:80|unique:teachers,username',
             'password'   => 'required|string|min:6',
-            'subject'    => 'nullable|string|max:200',
+            'subject'    => 'nullable|string|max:1000',
             'is_adviser' => 'nullable|boolean',
             'section'    => 'nullable|string|max:100',
         ]);
@@ -162,7 +162,7 @@ class TeacherController extends Controller
             'name'       => 'sometimes|string|max:150',
             'username'   => 'sometimes|string|max:80|unique:teachers,username,' . $id,
             'password'   => 'sometimes|nullable|string|min:6',
-            'subject'    => 'sometimes|nullable|string|max:200',
+            'subject'    => 'sometimes|nullable|string|max:1000',
             'is_adviser' => 'sometimes|boolean',
             'section'    => 'sometimes|nullable|string|max:100',
         ]);

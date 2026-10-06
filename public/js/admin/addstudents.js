@@ -342,6 +342,14 @@ async function editStudentInfo(lrn) {
                     <input id="swal-name" type="text" class="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-primary" value="${s.name}">
                     <p class="text-[10px] text-gray-400 mt-1">Format: Last Name, First Name M.I.</p>
                 </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Department</label>
+                    <select id="swal-department" class="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-primary">
+                        <option value="JHS" ${s.department === 'JHS' || !s.department ? 'selected' : ''}>Junior High School (JHS)</option>
+                        <option value="SHS - Academic" ${s.department === 'SHS - Academic' ? 'selected' : ''}>Senior High School - Academic</option>
+                        <option value="SHS - Techpro" ${s.department === 'SHS - Techpro' ? 'selected' : ''}>Senior High School - Techpro</option>
+                    </select>
+                </div>
             </div>`,
         focusConfirm: false,
         showCancelButton: true,
@@ -358,7 +366,12 @@ async function editStudentInfo(lrn) {
                 Swal.showValidationMessage('Name cannot be empty');
                 return false;
             }
-            return { lrn: newLrn, name: newName };
+            const newDept = document.getElementById('swal-department').value;
+            let strand = null;
+            let finalDept = 'JHS';
+            if (newDept.includes('Academic')) { finalDept = 'SHS'; strand = 'Academic'; }
+            if (newDept.includes('Techpro')) { finalDept = 'SHS'; strand = 'Techpro'; }
+            return { lrn: newLrn, name: newName, department: finalDept, strand: strand };
         }
     });
 
@@ -367,6 +380,8 @@ async function editStudentInfo(lrn) {
             // Local fallback if no DB id
             s.lrn = formValues.lrn;
             s.name = formValues.name;
+            s.department = formValues.department;
+            s.strand = formValues.strand;
             renderAddStudentTable();
             showMessage('Student info updated locally!');
             return;
@@ -376,7 +391,7 @@ async function editStudentInfo(lrn) {
             const res = await fetch(`/api/students/${s.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ lrn: formValues.lrn, name: formValues.name })
+                body: JSON.stringify({ lrn: formValues.lrn, name: formValues.name, department: formValues.department, strand: formValues.strand })
             });
 
             if (res.ok) {

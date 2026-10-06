@@ -23,15 +23,21 @@ class StudentSubjectController extends Controller
             $query->where('quarter', (int) $request->quarter);
         }
 
-        if ($request->has('school_year')) {
-            $query->where('school_year', $request->school_year);
+        if ($request->has('school_year') && !empty($request->school_year)) {
+            $sy = $request->school_year;
+            $query->where(function ($q) use ($sy) {
+                $q->where('school_year', $sy);
+                if ($sy === '2025-2026') {
+                    $q->orWhereNull('school_year')->orWhere('school_year', '');
+                }
+            });
         }
 
         $rows = $query->get()->map(function ($row) {
             return [
                 'n'           => $row->subject_name,
                 'quarter'     => $row->quarter,
-                'school_year' => $row->school_year,
+                'school_year' => $row->school_year ?: '2025-2026',
                 'ww1'     => $row->ww1,  'ww2' => $row->ww2,  'ww3' => $row->ww3,
                 'ww4'     => $row->ww4,  'ww5' => $row->ww5,  'ww6' => $row->ww6,
                 'ww7'     => $row->ww7,  'ww8' => $row->ww8,  'ww9' => $row->ww9,
@@ -46,10 +52,13 @@ class StudentSubjectController extends Controller
         });
 
         if ($request->has('with_name')) {
+            $attendances = $student->attendances()->orderBy('month')->get();
+
             return response()->json([
                 'student_name' => $student->name,
                 'section'      => $student->section,
-                'attendance'   => $student->attendance,
+                'attendance_records' => $attendances,
+                'attendance'   => $student->attendance, // Fallback for backwards compatibility
                 'enrollment_history' => is_string($student->enrollment_history) ? json_decode($student->enrollment_history, true) : $student->enrollment_history,
                 'subjects' => $rows
             ]);
@@ -67,8 +76,14 @@ class StudentSubjectController extends Controller
         $query = StudentSubject::join('students', 'student_subjects.student_id', '=', 'students.id')
             ->select('student_subjects.*', 'students.lrn');
 
-        if ($request->has('school_year')) {
-            $query->where('student_subjects.school_year', $request->school_year);
+        if ($request->has('school_year') && !empty($request->school_year)) {
+            $sy = $request->school_year;
+            $query->where(function ($q) use ($sy) {
+                $q->where('student_subjects.school_year', $sy);
+                if ($sy === '2025-2026') {
+                    $q->orWhereNull('student_subjects.school_year')->orWhere('student_subjects.school_year', '');
+                }
+            });
         }
 
         $rows = $query->get()->map(function ($row) {
@@ -76,7 +91,7 @@ class StudentSubjectController extends Controller
                 'lrn'         => $row->lrn,
                 'n'           => $row->subject_name,
                 'quarter'     => $row->quarter,
-                'school_year' => $row->school_year,
+                'school_year' => $row->school_year ?: '2025-2026',
                 'ww1'     => $row->ww1,  'ww2' => $row->ww2,  'ww3' => $row->ww3,
                 'ww4'     => $row->ww4,  'ww5' => $row->ww5,  'ww6' => $row->ww6,
                 'ww7'     => $row->ww7,  'ww8' => $row->ww8,  'ww9' => $row->ww9,
@@ -110,12 +125,14 @@ class StudentSubjectController extends Controller
         ]);
 
         $student = Student::where('lrn', $request->lrn)->firstOrFail();
+        $activeSy = \App\Models\Setting::where('key', 'active_sy')->value('value') ?: '2025-2026';
+        $schoolYear = !empty($request->school_year) ? $request->school_year : $activeSy;
 
         $row = StudentSubject::firstOrNew([
             'student_id'   => $student->id,
             'subject_name' => $request->subject,
             'quarter'      => $request->quarter ?? 1,
-            'school_year'  => $request->school_year,
+            'school_year'  => $schoolYear,
         ]);
 
         $field = $request->field;
@@ -150,12 +167,14 @@ class StudentSubjectController extends Controller
         $student = Student::where('lrn', $request->lrn)->firstOrFail();
 
         $quarter = $request->quarter ?? 1;
+        $activeSy = \App\Models\Setting::where('key', 'active_sy')->value('value') ?: '2025-2026';
+        $schoolYear = !empty($request->school_year) ? $request->school_year : $activeSy;
 
         $row = StudentSubject::firstOrNew([
             'student_id'   => $student->id,
             'subject_name' => $request->subject,
             'quarter'      => $quarter,
-            'school_year'  => $request->school_year,
+            'school_year'  => $schoolYear,
         ]);
 
         $scores = $request->scores ?? [];
